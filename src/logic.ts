@@ -61,9 +61,9 @@ export type Outcome = 'progress' | 'skip' | 'done'
 
 /* ---------- Today ---------- */
 
-/** Today's overrides. On a new day: hand-picked tasks carry over, "not today" and manual order reset. */
+/** Today's overrides. On a new day: hand-picked tasks and your manual order carry over; "not today" resets. */
 export const todayState = (s: State): TodayState =>
-  s.today && s.today.date === today() ? s.today : { date: today(), extra: s.today?.extra ?? [], skipped: [], order: null }
+  s.today && s.today.date === today() ? s.today : { date: today(), extra: s.today?.extra ?? [], skipped: [], order: s.today?.order ?? null }
 
 export const patchToday = (s: State, f: (t: TodayState) => TodayState): State => ({ ...s, today: f(todayState(s)) })
 
@@ -77,7 +77,8 @@ export const taskDue = (s: State, t: Task) =>
  *  - tasks already in progress
  *  - tasks pulled in by hand
  * minus anything marked "not today".
- * Order: crucial, then important, then nearest due date. Dragging overrides it for the day.
+ * Order: crucial, then important, then nearest due date. Dragging sets your own order, which is kept
+ * (new tasks join at the bottom) until you switch back to automatic.
  */
 export function todayList(s: State): Task[] {
   const td = todayState(s)

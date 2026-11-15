@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from './store'
 import type { View } from './types'
 import { daysLeftLabel, diffDays, fmtClock, fmtDay, fmtDur, keyOf, today } from './dates'
-import { commitTimer, finishWork, newTask, patchToday, queue, taskDue, timerElapsed, todayList, updateTask, type Outcome } from './logic'
+import { commitTimer, finishWork, newTask, patchToday, queue, taskDue, timerElapsed, todayList, todayState, updateTask, type Outcome } from './logic'
 
 export function Home({ go, now }: { go: (v: View) => void; now: number }) {
   const { s, set, toast } = useStore()
@@ -113,6 +113,9 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
             onDrop={() => drop(t.id)}
             onClick={() => focus(t.id)}
           >
+            <span className="handle" title="Drag to reorder">
+              ⋮⋮
+            </span>
             <span className="rank">{i + 1}</span>
             <span className="tl-main">
               <span className={`tl-title ${tone(t)}`}>{t.title}</span>
@@ -147,6 +150,20 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
           </div>
         ))}
         {!list.length && <div className="muted small pad-y">Nothing lined up for today.</div>}
+        {list.length > 1 && (
+          <div className="tl-order">
+            {todayState(s).order ? (
+              <>
+                Your order ·{' '}
+                <button className="link" onClick={() => set((st) => patchToday(st, (td) => ({ ...td, order: null })))}>
+                  switch to automatic
+                </button>
+              </>
+            ) : (
+              'Automatic order: ! crucial, ★ important, then nearest deadline. Drag to set your own.'
+            )}
+          </div>
+        )}
 
         <button className="link small tl-add" onClick={() => setAdding(!adding)}>
           {adding ? '− Close' : '+ Add to today'}

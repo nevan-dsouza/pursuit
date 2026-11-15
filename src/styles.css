@@ -1667,3 +1667,19 @@ code {
     font-size: 16px; /* stops iOS zooming in on focus */
   }
 }
+
+.tl-order {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 8px 0;
+  line-height: 1.5;
+}
+.tl-order .link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+@media (hover: none) {
+  .tl-item .handle {
+    display: none;
+  }
+}
