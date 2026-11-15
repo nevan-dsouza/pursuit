@@ -15,7 +15,7 @@ npm run dev        # http://localhost:5173
    - OAuth consent screen: External; add yourself (and testers) as test users; add scope `calendar.events.readonly`
    - Credentials → OAuth client ID → Web application
      - Authorized JavaScript origins: your Vercel URL
-     - Authorized redirect URI: `https://fyvdamlthjzsrisbjyam.supabase.co/auth/v1/callback`
+     - Authorized redirect URI: `https://uxhyrjextnxqbnfrngzk.supabase.co/auth/v1/callback`
 3. **Supabase dashboard** (project `pursuit`)
    - Authentication → Sign In / Providers → Google: enable, paste the client ID and secret
    - Authentication → URL Configuration: Site URL = your Vercel URL; add it (and `http://localhost:5173`) to Redirect URLs

@@ -1,4 +1,4 @@
--- Already applied to the Supabase project "pursuit" (fyvdamlthjzsrisbjyam). Kept here for reference.
+-- Already applied to the Supabase project "pursuit" (uxhyrjextnxqbnfrngzk). Kept here for reference.
 create table public.user_state (
   user_id uuid primary key references auth.users (id) on delete cascade,
   data jsonb not null default '{}'::jsonb,
