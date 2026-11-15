@@ -2553,6 +2553,32 @@ main > * {
     max-width: 36px;
   }
 
+  /* the sidebar is the only list: on Goals it shows your goals */
+  .goals-page {
+    display: block;
+  }
+  .goals-page .goal-list {
+    display: none;
+  }
+  .sb-tasks > * {
+    animation: fade-in var(--t) ease;
+  }
+  .sb-goals {
+    gap: 4px;
+  }
+  .sb-goals .side-label {
+    margin: 2px 4px 6px;
+  }
+  .sb-goals .goal-item {
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .sb-goals .goal-item:hover,
+  .sb-goals .goal-item.on {
+    background: var(--surface-2);
+  }
+
   /* Home no longer carries its own task column */
   .home,
   .home.with-panel {

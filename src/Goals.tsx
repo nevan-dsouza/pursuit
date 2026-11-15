@@ -9,17 +9,67 @@ import { Grid } from './Grid'
 
 type Kind = 'mine' | 'team'
 
-export function Goals() {
-  const { mine, team, space } = useStore()
-  const [sel, setSel] = useState<{ k: Kind; id: string } | null>(null)
-  const [creating, setCreating] = useState<Kind | null>(null)
-  const [title, setTitle] = useState('')
-  const [deadline, setDeadline] = useState('')
-  const wsOf = (k: Kind): Ws | null => (k === 'team' ? team : mine)
+export type GoalSel = { k: Kind; id: string } | null
+export interface GoalNav {
+  sel: GoalSel
+  setSel: (s: GoalSel) => void
+  creating: Kind | null
+  setCreating: (k: Kind | null) => void
+}
 
+/** Which goal is open, given what was clicked and what exists. */
+function useGoalPick({ sel, creating }: GoalNav) {
+  const { mine, team } = useStore()
+  const wsOf = (k: Kind): Ws | null => (k === 'team' ? team : mine)
   let cur = sel && wsOf(sel.k)?.s.goals.some((g) => g.id === sel.id) ? sel : null
   if (!cur) cur = mine.s.goals[0] ? { k: 'mine', id: mine.s.goals[0].id } : team?.s.goals[0] ? { k: 'team', id: team.s.goals[0].id } : null
   const makeIn: Kind | null = creating && wsOf(creating) ? creating : !cur ? 'mine' : null
+  return { cur, makeIn, wsOf }
+}
+
+/** The list of goals: lives in the app sidebar, and at the top of the page on phones. */
+export function GoalList({ nav, active = true }: { nav: GoalNav; active?: boolean }) {
+  const { mine, team, space } = useStore()
+  const { cur, makeIn } = useGoalPick(nav)
+  const { setSel, setCreating } = nav
+  const item = (k: Kind, g: Goal) => (
+    <button key={g.id} className={`goal-item ${active && !makeIn && cur?.k === k && cur.id === g.id ? 'on' : ''}`} onClick={() => (setSel({ k, id: g.id }), setCreating(null))}>
+      <span className="gi-title">{g.title}</span>
+      <span className="gi-meta">{daysLeftLabel(g.deadline)}</span>
+    </button>
+  )
+  return (
+    <>
+      <div className="side-label">My goals</div>
+      {mine.s.goals.map((g) => item('mine', g))}
+      <button className={`goal-item new ${active && makeIn === 'mine' ? 'on' : ''}`} onClick={() => setCreating('mine')}>
+        + New goal
+      </button>
+
+      {SPACES && (
+        <>
+          <div className="side-label space-label">Space</div>
+          <SpacePicker />
+        </>
+      )}
+      {team && (
+        <>
+          {team.s.goals.map((g) => item('team', g))}
+          <button className={`goal-item new ${active && makeIn === 'team' ? 'on' : ''}`} onClick={() => setCreating('team')}>
+            + New goal in {space?.name ?? 'space'}
+          </button>
+        </>
+      )}
+    </>
+  )
+}
+
+export function Goals({ nav }: { nav: GoalNav }) {
+  const { space } = useStore()
+  const { setSel, setCreating } = nav
+  const [title, setTitle] = useState('')
+  const [deadline, setDeadline] = useState('')
+  const { cur, makeIn, wsOf } = useGoalPick(nav)
   const ws = cur ? wsOf(cur.k) : null
   const goal = cur && ws ? ws.s.goals.find((g) => g.id === cur!.id) : undefined
 
@@ -32,36 +82,10 @@ export function Goals() {
     setDeadline('')
     setCreating(null)
   }
-  const item = (k: Kind, g: Goal) => (
-    <button key={g.id} className={`goal-item ${!makeIn && cur?.k === k && cur.id === g.id ? 'on' : ''}`} onClick={() => (setSel({ k, id: g.id }), setCreating(null))}>
-      <span className="gi-title">{g.title}</span>
-      <span className="gi-meta">{daysLeftLabel(g.deadline)}</span>
-    </button>
-  )
-
   return (
     <div className="goals-page">
       <aside className="goal-list">
-        <div className="side-label">My goals</div>
-        {mine.s.goals.map((g) => item('mine', g))}
-        <button className={`goal-item new ${makeIn === 'mine' ? 'on' : ''}`} onClick={() => setCreating('mine')}>
-          + New goal
-        </button>
-
-        {SPACES && (
-          <>
-            <div className="side-label space-label">Space</div>
-            <SpacePicker />
-          </>
-        )}
-        {team && (
-          <>
-            {team.s.goals.map((g) => item('team', g))}
-            <button className={`goal-item new ${makeIn === 'team' ? 'on' : ''}`} onClick={() => setCreating('team')}>
-              + New goal in {space?.name ?? 'space'}
-            </button>
-          </>
-        )}
+        <GoalList nav={nav} />
       </aside>
 
       <section className="goal-detail">

@@ -4,7 +4,7 @@ import type { View } from './types'
 import { fmtClock, fmtDay, fmtDur, keyOf, today } from './dates'
 import { commitTimer, streaks, timerElapsed, todayList, withMySpaceWork } from './logic'
 import { Home, TaskGroup, type Focus } from './Home'
-import { Goals } from './Goals'
+import { GoalList, Goals, type GoalNav, type GoalSel } from './Goals'
 import { Meetings } from './Meetings'
 import { Settings } from './Settings'
 import { Brand } from './Brand'
@@ -60,6 +60,9 @@ export default function App() {
   const [now, setNow] = useState(Date.now())
   const [tutorial, setTutorial] = useState(false)
   const [focus, setFocus] = useState<Focus>(null)
+  const [goalSel, setGoalSel] = useState<GoalSel>(null)
+  const [goalNew, setGoalNew] = useState<'mine' | 'team' | null>(null)
+  const goalNav: GoalNav = { sel: goalSel, setSel: setGoalSel, creating: goalNew, setCreating: setGoalNew }
   const [rail, setRail] = useState(() => {
     try {
       return localStorage.getItem(RAIL) === '1'
@@ -164,7 +167,12 @@ export default function App() {
             ))}
           </nav>
 
-          <div className="sb-tasks">
+          {view === 'goals' ? (
+            <div className="sb-tasks sb-goals" key="goals">
+              <GoalList nav={goalNav} />
+            </div>
+          ) : (
+          <div className="sb-tasks" key="tasks">
             <div className="tl-head">
               <span>My tasks</span>
               <span className="muted small">{fmtDay(t0)}</span>
@@ -182,6 +190,7 @@ export default function App() {
               </>
             )}
           </div>
+          )}
 
           <div className="sb-foot">
             <button className={`sb-item sb-streak ${streak.activeToday ? 'lit' : ''}`} onClick={() => go('stats')} title={`${streak.current}-day streak`}>
@@ -226,7 +235,7 @@ export default function App() {
       </nav>
       <main>
         {view === 'home' && home}
-        {view === 'goals' && <Goals />}
+        {view === 'goals' && <Goals nav={goalNav} />}
         {view === 'meetings' && <Meetings />}
         {view === 'spaces' && (SPACES ? <Spaces /> : home)}
         {view === 'stats' && <Stats go={go} />}
