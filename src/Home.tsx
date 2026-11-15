@@ -49,7 +49,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
 
   const notToday = (id: string) => {
     set((st) => patchToday(st.timer?.taskId === id ? commitTimer(st) : st, (td) => ({ ...td, skipped: [...td.skipped, id], extra: td.extra.filter((x) => x !== id) })))
-    toast('Removed from today', { label: 'Undo', run: () => set((st) => patchToday(st, (td) => ({ ...td, skipped: td.skipped.filter((x) => x !== id), extra: [...td.extra, id] }))) })
+    toast('Removed for today', { label: 'Undo', run: () => set((st) => patchToday(st, (td) => ({ ...td, skipped: td.skipped.filter((x) => x !== id), extra: [...td.extra, id] }))) })
   }
   const pull = (id: string) => set((st) => patchToday(st, (td) => ({ ...td, extra: [...td.extra.filter((x) => x !== id), id], skipped: td.skipped.filter((x) => x !== id) })))
   const create = () => {
@@ -166,7 +166,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
         )}
 
         <button className="link small tl-add" onClick={() => setAdding(!adding)}>
-          {adding ? '− Close' : '+ Add to today'}
+          {adding ? '− Close' : '+ Add a task'}
         </button>
         {adding && (
           <div className="tl-picker">
@@ -185,7 +185,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
               if (!rest.length) return null
               return (
                 <div key={g.id}>
-                  <div className="side-label">{g.title}</div>
+                  <div className="side-label">Removed for today · {g.title}</div>
                   {rest.map((t) => (
                     <button key={t.id} className="tl-pick" onClick={() => pull(t.id)}>
                       <span>+</span> <span className={tone(t)}>{t.title}</span>
@@ -247,7 +247,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
             <h1 className="task-title muted-title">{doneToday.length ? 'All clear for today' : 'Nothing lined up'}</h1>
             <p className="muted">Add a task to one of your goals and it will show up here.</p>
             <button className="primary" onClick={() => setAdding(true)}>
-              Add to today
+              Add a task
             </button>
           </div>
         )}

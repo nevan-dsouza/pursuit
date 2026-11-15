@@ -27,8 +27,8 @@ npm run dev        # http://localhost:5173
 - Sync code: `src/store.tsx`. Keys: `src/config.ts`. Schema: `supabase/schema.sql`.
 
 ## How the pieces connect
-- **Home = Today**, one list across all goals: the next task in each goal's queue + tasks in progress + tasks you add by hand, minus anything marked "not today". Order: crucial → important → nearest due date; drag to override for the day. Rules live in `todayList()` in `src/logic.ts`.
-- **In progress** keeps the task in Today · **Skip** removes it for today · **Done** completes it (the goal's next task then appears)
+- **Home**: one list of every open task across all goals, minus anything marked "not today". Automatic order: crucial → important → nearest due date → the goal's own queue order. Drag to set your own order (kept across days; new tasks join at the bottom) or switch back to automatic. Rules live in `todayList()` in `src/logic.ts`.
+- **In progress** marks the task and moves you to the next · **Skip** hides it until tomorrow · **Done** completes it
 - **Notes** → saved as a log on today's box of the goal grid (more logs = brighter purple)
 - **POA** → each line becomes a new task right after the current one in its goal's queue
 - **Timer** is manual (start / pause / stop). Session time is added to the task and shown when it's done.

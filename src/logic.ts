@@ -72,26 +72,18 @@ export const taskDue = (s: State, t: Task) =>
   s.milestones.find((m) => m.id === t.milestoneId)?.date ?? s.goals.find((g) => g.id === t.goalId)?.deadline ?? '9999-12-31'
 
 /**
- * Today's list, combined across goals:
- *  - the next task in each goal's queue (so every goal moves a step)
- *  - tasks already in progress
- *  - tasks pulled in by hand
- * minus anything marked "not today".
- * Order: crucial, then important, then nearest due date. Dragging sets your own order, which is kept
- * (new tasks join at the bottom) until you switch back to automatic.
+ * The Home list: every open task from every goal, minus anything marked "not today".
+ * Automatic order: crucial, then important, then nearest due date, then each goal's own queue order.
+ * Dragging sets your own order, which is kept (new tasks join at the bottom) until you switch back.
  */
 export function todayList(s: State): Task[] {
   const td = todayState(s)
   const skip = new Set(td.skipped)
-  const picked = new Map<string, Task>()
-  for (const g of s.goals) {
-    const top = queue(s, g.id).find((t) => !skip.has(t.id))
-    if (top) picked.set(top.id, top)
-  }
-  for (const t of s.tasks) if (t.status === 'open' && !skip.has(t.id) && (t.inProgress || td.extra.includes(t.id))) picked.set(t.id, t)
-
+  const goalPos = new Map(s.goals.map((g, i) => [g.id, i]))
   const rank = (t: Task) => (t.crucial ? 0 : t.important ? 1 : 2)
-  const auto = [...picked.values()].sort((a, b) => rank(a) - rank(b) || taskDue(s, a).localeCompare(taskDue(s, b)) || a.order - b.order)
+  const auto = s.tasks
+    .filter((t) => t.status === 'open' && !skip.has(t.id) && goalPos.has(t.goalId))
+    .sort((a, b) => rank(a) - rank(b) || taskDue(s, a).localeCompare(taskDue(s, b)) || goalPos.get(a.goalId)! - goalPos.get(b.goalId)! || a.order - b.order)
   if (!td.order) return auto
   const pos = (id: string) => {
     const i = td.order!.indexOf(id)
