@@ -2024,3 +2024,47 @@ code {
   text-align: left;
   margin: 0;
 }
+
+/* spaces page */
+.spaces-intro {
+  margin: -6px 0 16px;
+}
+.space-card.on {
+  border-color: color-mix(in srgb, var(--purple) 60%, transparent);
+}
+.space-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+.space-name {
+  font-size: 17px;
+}
+.space-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.pill-stat.shown {
+  color: #c4b5fd;
+  border-color: color-mix(in srgb, var(--purple) 60%, transparent);
+  white-space: nowrap;
+}
+.space-empty {
+  text-align: left;
+  padding: 2px 6px 6px;
+}
+.space-pick select {
+  width: 100%;
+}
+@media (max-width: 760px) {
+  .nav-item {
+    font-size: 12.5px;
+    padding: 10px 2px;
+  }
+}

@@ -1,54 +1,122 @@
 import { useState } from 'react'
 import { useStore } from './store'
 
-/** Space selector + "+ New Space". Used in the Home and Goals sidebars. */
-export function SpacePicker() {
-  const { auth, canSignIn, signIn, spaces, spaceId, space, switchSpace, toast } = useStore()
-  const [modal, setModal] = useState<null | 'create' | 'join'>(null)
-  if (auth.status !== 'in')
-    return (
-      <div className="space-note">
-        <div className="muted small">Spaces let you share goals and tasks. You need to be signed in to create one or join with a code.</div>
-        {canSignIn && (
-          <button className="new-space" onClick={signIn}>
-            Sign in with Google
-          </button>
-        )}
-      </div>
-    )
+const toSpaces = () => {
+  location.hash = 'spaces'
+}
 
-  const copy = async () => {
-    if (!space) return
+/** The space dropdown used in the Home and Goals sidebars. Creating and joining happen on the Spaces page. */
+export function SpacePicker() {
+  const { auth, spaces, spaceId, switchSpace } = useStore()
+  if (auth.status !== 'in' || !spaces.length)
+    return (
+      <button className="link small space-empty" onClick={toSpaces}>
+        {auth.status !== 'in' ? 'Sign in on the Spaces page to work with others' : 'Create or join a space'} →
+      </button>
+    )
+  return (
+    <div className="space-pick">
+      <select value={spaceId ?? ''} onChange={(e) => switchSpace(e.target.value || null)} title="Choose which space's tasks to show">
+        <option value="">No space</option>
+        {spaces.map((x) => (
+          <option key={x.id} value={x.id}>
+            {x.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+/** The Spaces page: your spaces, with + New Space and Join space on the right of the header. */
+export function Spaces() {
+  const { auth, canSignIn, signIn, spaces, spaceId, team, switchSpace, leaveSpace, toast } = useStore()
+  const [modal, setModal] = useState<null | 'create' | 'join'>(null)
+  const [confirmLeave, setConfirmLeave] = useState<string | null>(null)
+  const copy = async (code: string) => {
     try {
-      await navigator.clipboard.writeText(space.code)
+      await navigator.clipboard.writeText(code)
       toast('Space code copied')
     } catch {
-      toast(`Space code: ${space.code}`)
+      toast(`Space code: ${code}`)
     }
   }
 
   return (
-    <div className="space-pick">
-      {spaces.length > 0 && (
-        <select value={spaceId ?? ''} onChange={(e) => switchSpace(e.target.value || null)} title="Choose which space to show">
-          {!spaceId && <option value="">Choose a space…</option>}
-          {spaces.map((x) => (
-            <option key={x.id} value={x.id}>
-              {x.name}
-            </option>
-          ))}
-        </select>
-      )}
-      <button className="new-space" onClick={() => setModal('create')}>
-        + New Space
-      </button>
-      <button className="new-space join" onClick={() => setModal('join')}>
-        Join with code
-      </button>
-      {space && (
-        <button className="code-chip" onClick={copy} title={`Copy the code to invite people · ${space.members.join(', ')}`}>
-          {space.code}
-        </button>
+    <div className="page">
+      <header className="page-head">
+        <h2>Spaces</h2>
+        <div className="spacer" />
+        {auth.status === 'in' && (
+          <div className="btn-row">
+            <button className="primary" onClick={() => setModal('create')}>
+              + New Space
+            </button>
+            <button className="secondary" onClick={() => setModal('join')}>
+              Join space
+            </button>
+          </div>
+        )}
+      </header>
+      <p className="muted spaces-intro">A space is a shared workspace. Everyone in it sees and works on the same goals, milestones and tasks. Pick a space on Home to see its tasks under your own.</p>
+
+      {auth.status !== 'in' ? (
+        <div className="card">
+          <p className="muted">You need to be signed in to create a space or join one with a code.</p>
+          {canSignIn ? (
+            <button className="primary" onClick={signIn}>
+              Sign in with Google
+            </button>
+          ) : (
+            <div className="banner warn">Sign-in works when Pursuit is opened from its web address, not from a downloaded file.</div>
+          )}
+        </div>
+      ) : spaces.length === 0 ? (
+        <div className="card">
+          <p className="muted">You are not in any space yet. Create one and share its code, or join someone else's with the code they give you.</p>
+        </div>
+      ) : (
+        spaces.map((x) => {
+          const shown = x.id === spaceId
+          const doc = shown && team ? team.s : null
+          return (
+            <div key={x.id} className={`card space-card ${shown ? 'on' : ''}`}>
+              <div className="space-card-head">
+                <div>
+                  <b className="space-name">{x.name}</b>
+                  <div className="muted small">
+                    {x.members.length} member{x.members.length === 1 ? '' : 's'}: {x.members.join(', ')}
+                  </div>
+                  {doc && (
+                    <div className="muted small">
+                      {doc.goals.length} goal{doc.goals.length === 1 ? '' : 's'} · {doc.tasks.filter((t) => t.status === 'open').length} open task{doc.tasks.filter((t) => t.status === 'open').length === 1 ? '' : 's'} · {doc.tasks.filter((t) => t.status === 'done').length} done
+                    </div>
+                  )}
+                </div>
+                {shown ? <span className="pill-stat shown">Shown on Home</span> : null}
+              </div>
+              <div className="space-card-foot">
+                <span className="muted small">Code to invite people</span>
+                <button className="code-chip" title="Copy the code" onClick={() => copy(x.code)}>
+                  {x.code}
+                </button>
+                <div className="spacer" />
+                {!shown && (
+                  <button className="secondary small-btn" onClick={() => (switchSpace(x.id), toast(`${x.name} is now shown on Home`))}>
+                    Show on Home
+                  </button>
+                )}
+                <button
+                  className="danger small-btn"
+                  onBlur={() => setConfirmLeave(null)}
+                  onClick={() => (confirmLeave === x.id ? (leaveSpace(x.id), setConfirmLeave(null), toast(`Left ${x.name}`)) : setConfirmLeave(x.id))}
+                >
+                  {confirmLeave === x.id ? 'Click again to leave' : 'Leave'}
+                </button>
+              </div>
+            </div>
+          )
+        })
       )}
       {modal && <SpaceModal start={modal} onClose={() => setModal(null)} />}
     </div>
@@ -94,7 +162,7 @@ export function SpaceModal({ onClose, start = 'create' }: { onClose: () => void;
         {made ? (
           <>
             <h2 className="modal-title">“{made.name}” is ready</h2>
-            <p>Share this code. The other person signs in to Pursuit with Google, clicks “Join with code” on Home and enters it.</p>
+            <p>Share this code. The other person signs in to Pursuit with Google, opens Spaces, clicks “Join space” and enters it.</p>
             <button className="code-big" onClick={() => copy(made.code)} title="Copy">
               {made.code}
             </button>

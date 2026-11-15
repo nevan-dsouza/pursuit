@@ -8,9 +8,10 @@ import { Goals } from './Goals'
 import { Meetings } from './Meetings'
 import { Settings } from './Settings'
 import { Brand } from './Brand'
+import { Spaces } from './SpaceUI'
 import { Flame, Login, Stats, Tutorial } from './Extras'
 
-const VIEWS: View[] = ['home', 'goals', 'meetings', 'stats', 'settings']
+const VIEWS: View[] = ['home', 'goals', 'meetings', 'spaces', 'stats', 'settings']
 const fromHash = (): View => {
   const h = location.hash.slice(1) as View
   return VIEWS.includes(h) ? h : 'home'
@@ -67,6 +68,7 @@ export default function App() {
     ['home', 'Home'],
     ['goals', 'Goals'],
     ['meetings', 'Meetings'],
+    ['spaces', 'Spaces'],
   ]
 
   return (
@@ -93,6 +95,7 @@ export default function App() {
       <main>
         {view === 'home' && <Home go={go} now={now} />}
         {view === 'goals' && <Goals />}
+        {view === 'spaces' && <Spaces />}
         {view === 'stats' && <Stats go={go} />}
         {view === 'settings' && <Settings showTutorial={() => setTutorial(true)} />}
       </main>

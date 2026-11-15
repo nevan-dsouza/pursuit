@@ -1,20 +1,9 @@
 import { useRef, useState } from 'react'
 import { initialState, useStore } from './store'
 import { today } from './dates'
-import { SpaceModal } from './SpaceUI'
 
 export function Settings({ showTutorial }: { showTutorial: () => void }) {
-  const { s, set, toast, auth, sync, canSignIn, signIn, signOut, spaces, spaceId, switchSpace, leaveSpace } = useStore()
-  const [modal, setModal] = useState(false)
-  const [confirmLeave, setConfirmLeave] = useState<string | null>(null)
-  const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast('Code copied')
-    } catch {
-      toast(`Code: ${text}`)
-    }
-  }
+  const { s, set, toast, auth, sync, canSignIn, signIn, signOut } = useStore()
   const [confirmReset, setConfirmReset] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -71,50 +60,6 @@ export function Settings({ showTutorial }: { showTutorial: () => void }) {
             ) : (
               <small className="muted">Sign-in is available when Pursuit is opened from its web address, not from a downloaded file.</small>
             )}
-          </>
-        )}
-      </div>
-
-      <div className="field">
-        <span>Spaces</span>
-        <small className="muted">A space is a shared workspace: everyone in it sees the same goals, milestones, tasks and logs. Its tasks show under your own on Home. Share the code with people who have signed in to Pursuit so they can join.</small>
-        {auth.status !== 'in' ? (
-          <small className="muted">Sign in to create or join a space.</small>
-        ) : (
-          <>
-            {spaces.map((x) => (
-              <div key={x.id} className={`space-row ${x.id === spaceId ? 'on' : ''}`}>
-                <div className="space-main">
-                  <b>{x.name}</b>
-                  <span className="muted small">
-                    {x.members.length} member{x.members.length === 1 ? '' : 's'}: {x.members.join(', ')}
-                  </span>
-                </div>
-                <button className="code-chip" title="Copy the join code" onClick={() => copy(x.code)}>
-                  {x.code}
-                </button>
-                {x.id === spaceId ? (
-                  <span className="pill-stat">Shown on Home</span>
-                ) : (
-                  <button className="secondary small-btn" onClick={() => switchSpace(x.id)}>
-                    Show on Home
-                  </button>
-                )}
-                <button
-                  className="danger small-btn"
-                  onBlur={() => setConfirmLeave(null)}
-                  onClick={() => (confirmLeave === x.id ? (leaveSpace(x.id), setConfirmLeave(null), toast(`Left ${x.name}`)) : setConfirmLeave(x.id))}
-                >
-                  {confirmLeave === x.id ? 'Click again to leave' : 'Leave'}
-                </button>
-              </div>
-            ))}
-            <div className="btn-row">
-              <button className="secondary" onClick={() => setModal(true)}>
-                + New Space
-              </button>
-            </div>
-            {modal && <SpaceModal onClose={() => setModal(false)} />}
           </>
         )}
       </div>

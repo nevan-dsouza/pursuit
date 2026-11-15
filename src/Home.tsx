@@ -232,7 +232,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
             <TaskGroup ws={mine} list={lists.mine} curId={cur?.k === 'mine' ? cur.id : undefined} onFocus={(id) => doFocus('mine', id)} emptyText={mine.s.goals.length ? 'No open tasks of your own.' : 'Create a goal to add your own tasks.'} />
 
             <div className="tl-head tl-space-head">
-              <span>Space</span>
+              <span>Space tasks</span>
             </div>
             <SpacePicker />
             {auth.status === 'in' &&
@@ -241,7 +241,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
               ) : spaceLoading ? (
                 <div className="muted small tl-empty">Opening {space?.name ?? 'space'}…</div>
               ) : (
-                !spaceId && <div className="muted small tl-empty">Create a space or join one with a code to work on tasks together.</div>
+                null
               ))}
 
             {doneToday.length > 0 && (

@@ -87,4 +87,4 @@ export interface State {
   settings: Settings
 }
 
-export type View = 'home' | 'goals' | 'meetings' | 'stats' | 'settings'
+export type View = 'home' | 'goals' | 'meetings' | 'spaces' | 'stats' | 'settings'
