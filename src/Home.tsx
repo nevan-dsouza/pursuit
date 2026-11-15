@@ -272,7 +272,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
 
       <section className="stage">
         {task && s ? (
-          <div className="task-view">
+          <div className="task-view" key={task.id}>
             <div className="crumb">
               {cur?.k === 'team' && space && <span className="space-tag">{space.name}</span>}
               {goal?.title}

@@ -2134,3 +2134,188 @@ code {
     right: 0;
   }
 }
+
+/* =========================================================
+   Motion. One easing and a few durations, used everywhere.
+   ========================================================= */
+:root {
+  --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
+  --t-fast: 0.16s;
+  --t: 0.28s;
+}
+
+/* small things: colour, border and background changes */
+button,
+input,
+select,
+textarea,
+.tl-item,
+.goal-item,
+.q-item,
+.card,
+.day,
+.tag,
+.oc,
+.nav-item,
+.streak-chip {
+  transition:
+    background-color var(--t-fast) ease,
+    border-color var(--t-fast) ease,
+    color var(--t-fast) ease,
+    box-shadow var(--t-fast) ease,
+    opacity var(--t-fast) ease,
+    transform var(--t-fast) ease;
+}
+.oc:active,
+.primary:active,
+.secondary:active {
+  transform: scale(0.97);
+}
+
+/* pages, the focused task, panels, dialogs and toasts ease in */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+main > * {
+  animation: fade-in var(--t) ease;
+}
+.task-view {
+  animation: rise-in 0.34s var(--ease);
+}
+.tl-item,
+.q-item {
+  animation: fade-in var(--t) ease;
+}
+.side-panel > * {
+  animation: slide-in-right var(--t) var(--ease);
+}
+.overlay {
+  animation: fade-in 0.2s ease;
+}
+.tutorial {
+  animation: pop-in var(--t) var(--ease);
+}
+.toast {
+  animation: rise-in var(--t) var(--ease);
+}
+.day-tip {
+  animation: fade-in 0.12s ease;
+}
+.tl-picker,
+.day-panel {
+  animation: rise-in var(--t) var(--ease);
+}
+.bar-pair i,
+.gs-bar i {
+  transition:
+    height 0.5s var(--ease),
+    width 0.5s var(--ease);
+}
+
+/* ---- sidebar and Notes/POA panel: the columns glide, nothing jumps ---- */
+@media (min-width: 761px) {
+  .home {
+    --side: 310px;
+    --panel: 0px;
+    grid-template-columns: var(--side) minmax(0, 1fr) var(--panel);
+    transition: grid-template-columns var(--t) var(--ease);
+  }
+  .home.with-panel {
+    --panel: 360px;
+    grid-template-columns: var(--side) minmax(0, 1fr) var(--panel);
+  }
+  .home.side-collapsed,
+  .home.side-collapsed.with-panel {
+    grid-template-columns: 46px minmax(0, 1fr) var(--panel);
+  }
+  .panel-tabs,
+  .home.with-panel .panel-tabs {
+    right: calc(var(--panel) + 22px);
+    transition: right var(--t) var(--ease);
+  }
+  .side-panel {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .today-list {
+    z-index: 6;
+  }
+  /* the list keeps its full width while the column moves, so text never re-wraps mid-animation */
+  .home .side-body {
+    width: calc(var(--side) - 24px);
+    background: var(--bg);
+    transition:
+      opacity 0.2s ease,
+      transform var(--t) var(--ease),
+      box-shadow var(--t) ease,
+      visibility 0s;
+  }
+  .home.side-collapsed .side-body {
+    display: flex;
+    width: var(--side);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateX(-18px);
+    box-shadow: none;
+    transition:
+      opacity 0.18s ease,
+      transform var(--t) var(--ease),
+      box-shadow var(--t) ease,
+      visibility 0s linear var(--t);
+  }
+  .home.side-collapsed .today-list:hover .side-body {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+    box-shadow: 18px 0 40px rgba(0, 0, 0, 0.45);
+    transition-delay: 0s;
+  }
+  .side-strip {
+    transition: opacity var(--t-fast) ease;
+  }
+  .home.side-collapsed .today-list:hover .side-strip {
+    opacity: 0;
+  }
+}
+@media (max-width: 1100px) and (min-width: 761px) {
+  .home {
+    --side: 260px;
+  }
+  .home.with-panel {
+    --panel: 300px;
+  }
+}
+
+/* people who ask their device for less motion get none */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+}
