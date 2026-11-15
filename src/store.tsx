@@ -16,6 +16,8 @@ const SPACE = 'pursuit:space' // which space is open on this device
 const viewKey = (id: string) => `pursuit:spaceview:${id}`
 const CAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly'
 const CLIENT = Math.random().toString(36).slice(2) // identifies this tab's writes
+/** Test builds only (VITE_FAKE_SPACE=1): a signed-in user with one local space, no network. Compiled out of production. */
+const FAKE = import.meta.env.VITE_FAKE_SPACE === '1'
 
 export const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36)
 
@@ -104,9 +106,21 @@ const emptyView = (): ViewState => ({ timer: null, today: { date: '', extra: [],
 const compose = (sp: OpenSpace): State => ({ ...initialState(), ...sp.doc, ...sp.view, tutorialSeen: true })
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
-interface Ctx {
+/** One workspace: your own, or the selected space. */
+export interface Ws {
   s: State
   set: (f: (s: State) => State) => void
+  /** first name stamped on logs, sessions and finished tasks (spaces only) */
+  by?: string
+}
+
+interface Ctx {
+  /** your own workspace (same as `mine`) */
+  s: State
+  set: (f: (s: State) => State) => void
+  mine: Ws
+  /** the selected space, once loaded */
+  team: Ws | null
   toast: (msg: string, action?: Toast['action']) => void
   toasts: Toast[]
   dismiss: (id: string) => void
@@ -123,8 +137,6 @@ interface Ctx {
   spaceId: string | null
   space: SpaceInfo | null
   spaceLoading: boolean
-  /** first name to stamp on logs and finished tasks inside a space; undefined in the personal workspace */
-  by: string | undefined
   switchSpace: (id: string | null) => void
   createSpace: (name: string) => Promise<string | null>
   joinSpace: (code: string) => Promise<string | null>
@@ -139,7 +151,7 @@ const StoreCtx = createContext<Ctx>(null!)
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [s, setS] = useState<State>(load)
   const [toasts, setToasts] = useState<Toast[]>([])
-  const [auth, setAuth] = useState<Auth>({ status: cloud ? 'loading' : 'guest' })
+  const [auth, setAuth] = useState<Auth>(FAKE ? { status: 'in', name: 'Test User', email: 'test@example.com' } : { status: cloud ? 'loading' : 'guest' })
   const [sync, setSync] = useState<Sync>('device')
   const [loaded, setLoaded] = useState(!cloud)
 
@@ -152,9 +164,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   latest.current = s
 
   // ----- shared spaces -----
-  const [spaces, setSpaces] = useState<SpaceInfo[]>([])
-  const [spaceId, setSpaceId] = useState<string | null>(() => (cloud ? ls.get(SPACE) : null))
-  const [sp, setSp] = useState<OpenSpace | null>(null)
+  const [spaces, setSpaces] = useState<SpaceInfo[]>(FAKE ? [{ id: 'fake', name: 'Launch team', code: 'ABCD2345', owner: 'me', members: ['Test User', 'Priya'] }] : [])
+  const [spaceId, setSpaceId] = useState<string | null>(() => (FAKE ? 'fake' : cloud ? ls.get(SPACE) : null))
+  const [sp, setSp] = useState<OpenSpace | null>(() => (FAKE ? { id: 'fake', doc: normShared(JSON.parse(ls.get('pursuit:fake-space') ?? '{}')), view: emptyView() } : null))
   const spRef = useRef<OpenSpace | null>(null)
   spRef.current = sp
   const spBase = useRef<Shared>(emptyShared()) // the space as last seen on the server
@@ -162,8 +174,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const spBusy = useRef(false)
   const spTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inSpace = !!(sp && spaceId && sp.id === spaceId && auth.status === 'in')
-  const inSpaceRef = useRef(false)
-  inSpaceRef.current = inSpace
 
   // always keep a copy on this device
   useEffect(() => ls.set(KEY, JSON.stringify(s)), [s])
@@ -279,6 +289,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    if (FAKE) return
     if (auth.status === 'in') loadSpaces()
     else {
       setSpaces([])
@@ -344,6 +355,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // open the selected space and listen for other members' changes
   useEffect(() => {
+    if (FAKE) return
     if (!cloud || auth.status !== 'in' || !spaceId) {
       setSp(null)
       return
@@ -423,8 +435,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  const set = useCallback((f: (s: State) => State) => {
-    if (!inSpaceRef.current) return setS(f)
+  const set = useCallback((f: (s: State) => State) => setS(f), [])
+  const setTeam = useCallback((f: (s: State) => State) => {
     setSp((prev) => {
       if (!prev) return prev
       const next = f(compose(prev))
@@ -442,13 +454,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   )
 
   const value: Ctx = {
-    s: inSpace ? compose(sp!) : s,
+    s,
     set,
+    mine: { s, set },
+    team: inSpace ? { s: compose(sp!), set: setTeam, by: (auth.name ?? '').split(' ')[0] || 'Someone' } : null,
     spaces,
     spaceId,
     space: spaces.find((x) => x.id === spaceId) ?? null,
     spaceLoading: auth.status === 'in' && !!spaceId && !inSpace,
-    by: inSpace ? (auth.name ?? '').split(' ')[0] || undefined : undefined,
     switchSpace,
     createSpace: (name) => spaceRpc('create_space', { p_name: name }),
     joinSpace: (code) => spaceRpc('join_space', { p_code: code }),

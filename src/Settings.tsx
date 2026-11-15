@@ -1,20 +1,12 @@
 import { useRef, useState } from 'react'
 import { initialState, useStore } from './store'
 import { today } from './dates'
+import { SpaceModal } from './SpaceUI'
 
 export function Settings({ showTutorial }: { showTutorial: () => void }) {
-  const { s, set, toast, auth, sync, canSignIn, signIn, signOut, spaces, spaceId, space, switchSpace, createSpace, joinSpace, leaveSpace } = useStore()
-  const [newName, setNewName] = useState('')
-  const [code, setCode] = useState('')
-  const [busy, setBusy] = useState(false)
+  const { s, set, toast, auth, sync, canSignIn, signIn, signOut, spaces, spaceId, switchSpace, leaveSpace } = useStore()
+  const [modal, setModal] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState<string | null>(null)
-  const run = async (fn: () => Promise<string | null>, ok: string) => {
-    setBusy(true)
-    const err = await fn()
-    setBusy(false)
-    toast(err ?? ok)
-    if (!err) (setNewName(''), setCode(''))
-  }
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -85,7 +77,7 @@ export function Settings({ showTutorial }: { showTutorial: () => void }) {
 
       <div className="field">
         <span>Spaces</span>
-        <small className="muted">A space is a shared workspace: everyone in it sees the same goals, milestones, tasks and logs. Share its code with people who have signed in to Pursuit so they can join.</small>
+        <small className="muted">A space is a shared workspace: everyone in it sees the same goals, milestones, tasks and logs. Its tasks show under your own on Home. Share the code with people who have signed in to Pursuit so they can join.</small>
         {auth.status !== 'in' ? (
           <small className="muted">Sign in to create or join a space.</small>
         ) : (
@@ -102,12 +94,10 @@ export function Settings({ showTutorial }: { showTutorial: () => void }) {
                   {x.code}
                 </button>
                 {x.id === spaceId ? (
-                  <button className="secondary small-btn" onClick={() => switchSpace(null)}>
-                    Back to Personal
-                  </button>
+                  <span className="pill-stat">Shown on Home</span>
                 ) : (
                   <button className="secondary small-btn" onClick={() => switchSpace(x.id)}>
-                    Open
+                    Show on Home
                   </button>
                 )}
                 <button
@@ -119,18 +109,12 @@ export function Settings({ showTutorial }: { showTutorial: () => void }) {
                 </button>
               </div>
             ))}
-            <div className="add-task">
-              <input placeholder="New space name, e.g. Team launch" value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && newName.trim() && run(() => createSpace(newName.trim()), 'Space created')} />
-              <button className="primary" disabled={busy || !newName.trim()} onClick={() => run(() => createSpace(newName.trim()), 'Space created')}>
-                Create
+            <div className="btn-row">
+              <button className="secondary" onClick={() => setModal(true)}>
+                + New Space
               </button>
             </div>
-            <div className="add-task">
-              <input placeholder="Have a code? Enter it here" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && code.trim() && run(() => joinSpace(code.trim()), 'Joined the space')} />
-              <button className="secondary" disabled={busy || !code.trim()} onClick={() => run(() => joinSpace(code.trim()), 'Joined the space')}>
-                Join
-              </button>
-            </div>
+            {modal && <SpaceModal onClose={() => setModal(false)} />}
           </>
         )}
       </div>
@@ -145,19 +129,17 @@ export function Settings({ showTutorial }: { showTutorial: () => void }) {
       </div>
 
       <div className="field">
-        <span>{space ? `Data in “${space.name}”` : 'Your data'}</span>
-        <small className="muted">{space ? 'Export a backup of this space. Import and reset are turned off in shared spaces so nobody wipes the team’s work by accident.' : 'Export a backup file, or restore one.'}</small>
+        <span>Your data</span>
+        <small className="muted">Export a backup of your own goals and tasks, or restore one. Shared spaces are not affected.</small>
         <div className="btn-row">
           <button className="secondary" onClick={exportData}>
             Export backup
           </button>
-          {!space && (
-            <button className="secondary" onClick={() => fileRef.current?.click()}>
-              Import backup
-            </button>
-          )}
+          <button className="secondary" onClick={() => fileRef.current?.click()}>
+            Import backup
+          </button>
           <input ref={fileRef} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])} />
-          {!space && <button
+          <button
             className="danger"
             onBlur={() => setConfirmReset(false)}
             onClick={() => {
@@ -166,8 +148,8 @@ export function Settings({ showTutorial }: { showTutorial: () => void }) {
               toast('All data cleared')
             }}
           >
-            {confirmReset ? 'Click again to erase everything' : 'Reset all data'}
-          </button>}
+            {confirmReset ? 'Click again to erase everything' : 'Reset my data'}
+          </button>
         </div>
       </div>
     </div>

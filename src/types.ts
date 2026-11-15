@@ -63,6 +63,7 @@ export interface TodayState {
 /** One stopped timer session, dated so stats can show focus time per day. */
 export interface Session {
   id?: string
+  by?: string // who (spaces only)
   date: string
   ms: number
   goalId: string

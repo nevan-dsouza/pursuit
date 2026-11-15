@@ -1,47 +1,71 @@
 import { useState } from 'react'
-import { useStore, uid } from './store'
+import { useStore, uid, type Ws } from './store'
+import { SpacePicker } from './SpaceUI'
 import type { Goal } from './types'
 import { daysLeftLabel, fmtDay, fmtDur, today } from './dates'
 import { doneTasks, logsByDay, newTask, queue, setQueue, updateTask } from './logic'
 import { Grid } from './Grid'
 
+type Kind = 'mine' | 'team'
+
 export function Goals() {
-  const { s, set } = useStore()
+  const { mine, team, space } = useStore()
+  const [sel, setSel] = useState<{ k: Kind; id: string } | null>(null)
+  const [creating, setCreating] = useState<Kind | null>(null)
   const [title, setTitle] = useState('')
   const [deadline, setDeadline] = useState('')
-  const [creating, setCreating] = useState(s.goals.length === 0)
-  const goal = s.goals.find((g) => g.id === s.selectedGoalId) ?? s.goals[0]
+  const wsOf = (k: Kind): Ws | null => (k === 'team' ? team : mine)
+
+  let cur = sel && wsOf(sel.k)?.s.goals.some((g) => g.id === sel.id) ? sel : null
+  if (!cur) cur = mine.s.goals[0] ? { k: 'mine', id: mine.s.goals[0].id } : team?.s.goals[0] ? { k: 'team', id: team.s.goals[0].id } : null
+  const makeIn: Kind | null = creating && wsOf(creating) ? creating : !cur ? 'mine' : null
+  const ws = cur ? wsOf(cur.k) : null
+  const goal = cur && ws ? ws.s.goals.find((g) => g.id === cur!.id) : undefined
 
   const create = () => {
-    if (!title.trim() || !deadline) return
+    if (!title.trim() || !deadline || !makeIn) return
     const g: Goal = { id: uid(), title: title.trim(), startDate: today(), deadline, createdAt: Date.now() }
-    set((st) => ({ ...st, goals: [...st.goals, g], selectedGoalId: g.id }))
+    wsOf(makeIn)!.set((st) => ({ ...st, goals: [...st.goals, g] }))
+    setSel({ k: makeIn, id: g.id })
     setTitle('')
     setDeadline('')
-    setCreating(false)
+    setCreating(null)
   }
+  const item = (k: Kind, g: Goal) => (
+    <button key={g.id} className={`goal-item ${!makeIn && cur?.k === k && cur.id === g.id ? 'on' : ''}`} onClick={() => (setSel({ k, id: g.id }), setCreating(null))}>
+      <span className="gi-title">{g.title}</span>
+      <span className="gi-meta">{daysLeftLabel(g.deadline)}</span>
+    </button>
+  )
 
   return (
     <div className="goals-page">
       <aside className="goal-list">
-        <div className="side-label">Goals</div>
-        {s.goals.map((g) => (
-          <button key={g.id} className={`goal-item ${g.id === goal?.id && !creating ? 'on' : ''}`} onClick={() => (set((st) => ({ ...st, selectedGoalId: g.id })), setCreating(false))}>
-            <span className="gi-title">{g.title}</span>
-            <span className="gi-meta">{daysLeftLabel(g.deadline)}</span>
-          </button>
-        ))}
-        <button className={`goal-item new ${creating ? 'on' : ''}`} onClick={() => setCreating(true)}>
+        <div className="side-label">My goals</div>
+        {mine.s.goals.map((g) => item('mine', g))}
+        <button className={`goal-item new ${makeIn === 'mine' ? 'on' : ''}`} onClick={() => setCreating('mine')}>
           + New goal
         </button>
+
+        <div className="side-label space-label">Space</div>
+        <SpacePicker />
+        {team && (
+          <>
+            {team.s.goals.map((g) => item('team', g))}
+            <button className={`goal-item new ${makeIn === 'team' ? 'on' : ''}`} onClick={() => setCreating('team')}>
+              + New goal in {space?.name ?? 'space'}
+            </button>
+          </>
+        )}
       </aside>
 
       <section className="goal-detail">
-        {creating || !goal ? (
+        {makeIn || !goal || !ws ? (
           <div className="create-goal">
-            <h2>New goal</h2>
+            <h2>{makeIn === 'team' ? `New goal in ${space?.name ?? 'space'}` : 'New goal'}</h2>
             <p className="muted">
               A goal is the <b>big picture</b>: what you want to achieve by a date. You'll set milestones along the way and break the work into small tasks.
+              {makeIn === 'team' && ' Everyone in the space will see it and can work on it.'}
             </p>
             <input className="bare-input big" autoFocus placeholder="e.g. Pass the GCP Data Engineer exam" value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && create()} />
             <label className="field inline">
@@ -52,23 +76,24 @@ export function Goals() {
               <button className="primary" disabled={!title.trim() || !deadline} onClick={create}>
                 Create goal
               </button>
-              {s.goals.length > 0 && (
-                <button className="link" onClick={() => setCreating(false)}>
+              {cur && (
+                <button className="link" onClick={() => setCreating(null)}>
                   Cancel
                 </button>
               )}
             </div>
           </div>
         ) : (
-          <GoalDetail key={goal.id} goal={goal} />
+          <GoalDetail key={cur!.k + goal.id} goal={goal} ws={ws} spaceName={cur!.k === 'team' ? space?.name : undefined} />
         )}
       </section>
     </div>
   )
 }
 
-function GoalDetail({ goal }: { goal: Goal }) {
-  const { s, set, toast, by } = useStore()
+function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: string }) {
+  const { toast } = useStore()
+  const { s, set, by } = ws
   const t = today()
   const clamp = (d: string) => (d < goal.startDate ? goal.startDate : d > goal.deadline ? goal.deadline : d)
   const [day, setDay] = useState(clamp(t))
@@ -123,7 +148,6 @@ function GoalDetail({ goal }: { goal: Goal }) {
       logs: st.logs.filter((l) => l.goalId !== goal.id),
       tasks: st.tasks.filter((x) => x.goalId !== goal.id),
       timer: st.timer && st.tasks.find((x) => x.id === st.timer!.taskId)?.goalId === goal.id ? null : st.timer,
-      selectedGoalId: null,
     }))
     toast('Goal deleted')
   }
@@ -131,6 +155,7 @@ function GoalDetail({ goal }: { goal: Goal }) {
   return (
     <div className="detail">
       <header className="detail-head">
+        {spaceName && <span className="space-tag">{spaceName}</span>}
         <input className="title-input" value={goal.title} onChange={(e) => patchGoal({ title: e.target.value })} />
         <div className="detail-meta">
           <label className="field inline compact">

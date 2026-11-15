@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useStore } from './store'
 import type { View } from './types'
 import { fmtClock } from './dates'
-import { streaks, timerElapsed } from './logic'
+import { streaks, timerElapsed, withMySpaceWork } from './logic'
 import { Home } from './Home'
 import { Goals } from './Goals'
 import { Meetings } from './Meetings'
@@ -17,7 +17,7 @@ const fromHash = (): View => {
 }
 
 export default function App() {
-  const { s, set, toasts, dismiss, auth, sync, loaded, spaces, spaceId, space, spaceLoading, switchSpace } = useStore()
+  const { s, set, toasts, dismiss, auth, sync, loaded, team } = useStore()
   const [view, setView] = useState<View>(fromHash)
   const [now, setNow] = useState(Date.now())
   const [tutorial, setTutorial] = useState(false)
@@ -30,8 +30,9 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    document.title = s.timer?.start ? `${fmtClock(timerElapsed(s, now))} · Pursuit` : 'Pursuit'
-  }, [now, s.timer])
+    const live = s.timer?.start ? s : team?.s.timer?.start ? team.s : null
+    document.title = live ? `${fmtClock(timerElapsed(live, now))} · Pursuit` : 'Pursuit'
+  }, [now, s.timer, team?.s.timer])
 
   const go = (v: View) => {
     location.hash = v
@@ -60,7 +61,7 @@ export default function App() {
     setTutorial(false)
     if (!s.tutorialSeen) set((st) => ({ ...st, tutorialSeen: true }))
   }
-  const streak = streaks(s)
+  const streak = streaks(withMySpaceWork(s, team?.s ?? null, team?.by))
 
   const nav: [View, string][] = [
     ['home', 'Home'],
@@ -82,22 +83,6 @@ export default function App() {
             Stats
           </button>
         </div>
-        {auth.status === 'in' && (
-          <select
-            className={`space-select ${spaceId ? 'shared' : ''}`}
-            title="Switch between your personal workspace and shared spaces"
-            value={spaceId ?? ''}
-            onChange={(e) => (e.target.value === '__manage' ? go('settings') : switchSpace(e.target.value || null))}
-          >
-            <option value="">Personal</option>
-            {spaces.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.name}
-              </option>
-            ))}
-            <option value="__manage">New or join a space…</option>
-          </select>
-        )}
         <button className={`streak-chip ${streak.activeToday ? 'lit' : ''} ${view === 'stats' ? 'on' : ''}`} onClick={() => go('stats')} title={`${streak.current}-day streak · open stats`}>
           <Flame /> {streak.current}
         </button>
@@ -106,16 +91,9 @@ export default function App() {
         </button>
       </nav>
       <main>
-        {spaceLoading && view !== 'settings' && view !== 'meetings' ? (
-          <div className="splash small-splash">Opening {space?.name ?? 'space'}…</div>
-        ) : (
-          <>
-            {view === 'home' && <Home go={go} now={now} />}
-            {view === 'goals' && <Goals />}
-            {view === 'stats' && <Stats go={go} />}
-          </>
-        )}
-        {view === 'meetings' && <Meetings />}
+        {view === 'home' && <Home go={go} now={now} />}
+        {view === 'goals' && <Goals />}
+        {view === 'stats' && <Stats go={go} />}
         {view === 'settings' && <Settings showTutorial={() => setTutorial(true)} />}
       </main>
       {showTutorial && <Tutorial onClose={closeTutorial} />}

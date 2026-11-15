@@ -42,12 +42,12 @@ export const timerElapsed = (s: State, now: number) =>
   s.timer ? s.timer.accMs + (s.timer.start ? now - s.timer.start : 0) : 0
 
 /** Add the running timer's time to its task, record the session, and clear the timer. */
-export function commitTimer(s: State): State {
+export function commitTimer(s: State, by?: string): State {
   if (!s.timer) return s
   const ms = timerElapsed(s, Date.now())
   const t = s.tasks.find((x) => x.id === s.timer!.taskId)
   if (!t) return { ...s, timer: null }
-  const sessions = ms >= 1000 ? [...(s.sessions ?? []), { id: uid(), date: today(), ms, goalId: t.goalId }] : (s.sessions ?? [])
+  const sessions = ms >= 1000 ? [...(s.sessions ?? []), { id: uid(), date: today(), ms, goalId: t.goalId, ...(by ? { by } : {}) }] : (s.sessions ?? [])
   return { ...updateTask(s, t.id, { timeMs: t.timeMs + ms }), sessions, timer: null }
 }
 
@@ -103,7 +103,7 @@ export function todayList(s: State): Task[] {
  *  - In progress keeps it in Today, Skip removes it for today, Done completes it
  */
 export function finishWork(s0: State, taskId: string, outcome: Outcome, by?: string): { state: State; created: number; logged: boolean } {
-  let s = commitTimer(s0)
+  let s = commitTimer(s0, by)
   const t = s.tasks.find((x) => x.id === taskId)
   if (!t) return { state: s, created: 0, logged: false }
 
@@ -177,4 +177,15 @@ export function recentDays(s: State, n: number) {
       logs: s.logs.filter((l) => l.date === date).length,
     }
   })
+}
+
+/** Your own workspace plus your share of a space's activity, for a streak that counts both. */
+export function withMySpaceWork(mine: State, team: State | null, by?: string): State {
+  if (!team || !by) return mine
+  return {
+    ...mine,
+    logs: [...mine.logs, ...team.logs.filter((l) => l.by === by)],
+    sessions: [...(mine.sessions ?? []), ...(team.sessions ?? []).filter((x) => x.by === by)],
+    tasks: [...mine.tasks, ...team.tasks.filter((t) => t.status === 'done' && t.doneBy === by)],
+  }
 }
