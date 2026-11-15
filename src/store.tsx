@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { State } from './types'
+import { emptyShared, merge3, normShared, pickShared, pickView, type Shared, type ViewState } from './spaces'
 import { cloud } from './cloud'
 
 /**
@@ -11,6 +12,8 @@ const KEY = 'pursuit:v2'
 const OWNER = 'pursuit:owner' // whose data is in KEY: a user id, or absent for guest
 const GUEST = 'pursuit:guest'
 const GTOKEN = 'pursuit:gtoken'
+const SPACE = 'pursuit:space' // which space is open on this device
+const viewKey = (id: string) => `pursuit:spaceview:${id}`
 const CAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly'
 const CLIENT = Math.random().toString(36).slice(2) // identifies this tab's writes
 
@@ -84,6 +87,23 @@ export interface Auth {
 }
 export type Sync = 'device' | 'saving' | 'synced' | 'offline'
 
+export interface SpaceInfo {
+  id: string
+  name: string
+  code: string
+  owner: string
+  members: string[]
+}
+interface OpenSpace {
+  id: string
+  doc: Shared
+  view: ViewState
+}
+const emptyView = (): ViewState => ({ timer: null, today: { date: '', extra: [], skipped: [], order: null }, focusId: null, selectedGoalId: null })
+/** A space looks like a normal workspace to the rest of the app: shared content + this person's own view state. */
+const compose = (sp: OpenSpace): State => ({ ...initialState(), ...sp.doc, ...sp.view, tutorialSeen: true })
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+
 interface Ctx {
   s: State
   set: (f: (s: State) => State) => void
@@ -98,6 +118,17 @@ interface Ctx {
   signIn: () => void
   signOut: () => void
   useAsGuest: () => void
+  /** shared spaces */
+  spaces: SpaceInfo[]
+  spaceId: string | null
+  space: SpaceInfo | null
+  spaceLoading: boolean
+  /** first name to stamp on logs and finished tasks inside a space; undefined in the personal workspace */
+  by: string | undefined
+  switchSpace: (id: string | null) => void
+  createSpace: (name: string) => Promise<string | null>
+  joinSpace: (code: string) => Promise<string | null>
+  leaveSpace: (id: string) => Promise<void>
   connectCalendar: () => void
   calendarToken: () => string | null
   clearCalendarToken: () => void
@@ -119,6 +150,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const lastRemote = useRef('')
   const latest = useRef(s)
   latest.current = s
+
+  // ----- shared spaces -----
+  const [spaces, setSpaces] = useState<SpaceInfo[]>([])
+  const [spaceId, setSpaceId] = useState<string | null>(() => (cloud ? ls.get(SPACE) : null))
+  const [sp, setSp] = useState<OpenSpace | null>(null)
+  const spRef = useRef<OpenSpace | null>(null)
+  spRef.current = sp
+  const spBase = useRef<Shared>(emptyShared()) // the space as last seen on the server
+  const spVersion = useRef(0)
+  const spBusy = useRef(false)
+  const spTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inSpace = !!(sp && spaceId && sp.id === spaceId && auth.status === 'in')
+  const inSpaceRef = useRef(false)
+  inSpaceRef.current = inSpace
 
   // always keep a copy on this device
   useEffect(() => ls.set(KEY, JSON.stringify(s)), [s])
@@ -219,6 +264,156 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [auth.status, pull])
 
+  const loadSpaces = useCallback(async () => {
+    if (!cloud || !user.current) return
+    const [a, b] = await Promise.all([cloud.from('spaces').select('id, name, code, owner'), cloud.from('space_members').select('space_id, display_name')])
+    if (a.error || b.error) return
+    const list: SpaceInfo[] = (a.data ?? []).map((x) => ({ ...x, members: (b.data ?? []).filter((m) => m.space_id === x.id).map((m) => m.display_name) }))
+    list.sort((x, y) => x.name.localeCompare(y.name))
+    setSpaces(list)
+    const open = ls.get(SPACE)
+    if (open && !list.some((x) => x.id === open)) {
+      ls.del(SPACE)
+      setSpaceId(null)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (auth.status === 'in') loadSpaces()
+    else {
+      setSpaces([])
+      setSp(null)
+    }
+  }, [auth.status, loadSpaces])
+
+  /** Save the open space. If someone else saved first, merge their changes with ours task by task and try again. */
+  const syncSpace = useCallback(async () => {
+    if (!cloud || spBusy.current) return
+    spBusy.current = true
+    try {
+      for (let i = 0; i < 5; i++) {
+        const cur = spRef.current
+        if (!cur || same(cur.doc, spBase.current)) break
+        const local = cur.doc
+        const v = spVersion.current
+        const { data: rows, error } = await cloud
+          .from('spaces')
+          .update({ data: local, version: v + 1, client_id: CLIENT, updated_at: new Date().toISOString() })
+          .eq('id', cur.id)
+          .eq('version', v)
+          .select('version')
+        if (spRef.current?.id !== cur.id) return
+        if (error) {
+          setSync('offline')
+          return
+        }
+        if (rows && rows.length) {
+          spBase.current = local
+          spVersion.current = v + 1
+          continue // loop again in case more edits arrived while saving
+        }
+        const { data: remote, error: e2 } = await cloud.from('spaces').select('data, version').eq('id', cur.id).maybeSingle()
+        if (e2 || !remote || spRef.current?.id !== cur.id) {
+          setSync('offline')
+          return
+        }
+        const theirs = normShared(remote.data)
+        const merged = merge3(spBase.current, spRef.current!.doc, theirs)
+        spBase.current = theirs
+        spVersion.current = remote.version
+        spRef.current = { ...spRef.current!, doc: merged }
+        setSp((p) => (p && p.id === cur.id ? { ...p, doc: merged } : p))
+      }
+      setSync('synced')
+    } finally {
+      spBusy.current = false
+    }
+  }, [])
+
+  const pullSpace = useCallback(async () => {
+    const cur = spRef.current
+    if (!cloud || !cur || spBusy.current) return
+    const { data: remote, error } = await cloud.from('spaces').select('data, version').eq('id', cur.id).maybeSingle()
+    if (error || !remote || spRef.current?.id !== cur.id || remote.version === spVersion.current) return
+    const theirs = normShared(remote.data)
+    const merged = merge3(spBase.current, spRef.current!.doc, theirs)
+    spBase.current = theirs
+    spVersion.current = remote.version
+    setSp((p) => (p && p.id === cur.id ? { ...p, doc: merged } : p))
+  }, [])
+
+  // open the selected space and listen for other members' changes
+  useEffect(() => {
+    if (!cloud || auth.status !== 'in' || !spaceId) {
+      setSp(null)
+      return
+    }
+    let dead = false
+    setSp(null)
+    ;(async () => {
+      const { data, error } = await cloud.from('spaces').select('data, version').eq('id', spaceId).maybeSingle()
+      if (dead) return
+      if (error || !data) {
+        ls.del(SPACE)
+        setSpaceId(null)
+        return
+      }
+      const doc = normShared(data.data)
+      spBase.current = doc
+      spVersion.current = data.version
+      let view = emptyView()
+      try {
+        view = { ...view, ...JSON.parse(ls.get(viewKey(spaceId)) ?? '{}') }
+      } catch {
+        /* keep the empty view */
+      }
+      setSp({ id: spaceId, doc, view })
+    })()
+    const ch = cloud
+      .channel(`space-${spaceId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'spaces', filter: `id=eq.${spaceId}` }, (p) => {
+        if ((p.new as { client_id?: string })?.client_id !== CLIENT) pullSpace()
+      })
+      .subscribe()
+    const onVisible = () => document.visibilityState === 'visible' && (pullSpace(), loadSpaces())
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      dead = true
+      cloud!.removeChannel(ch)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [auth.status, spaceId, pullSpace, loadSpaces])
+
+  // save space edits (debounced) and remember this person's view of the space on this device
+  useEffect(() => {
+    if (!sp) return
+    ls.set(viewKey(sp.id), JSON.stringify(sp.view))
+    if (same(sp.doc, spBase.current)) return
+    setSync('saving')
+    if (spTimer.current) clearTimeout(spTimer.current)
+    spTimer.current = setTimeout(syncSpace, 600)
+  }, [sp, syncSpace])
+
+  const switchSpace = (id: string | null) => {
+    if (id) ls.set(SPACE, id)
+    else ls.del(SPACE)
+    setSpaceId(id)
+  }
+  const spaceRpc = async (fn: 'create_space' | 'join_space', args: Record<string, string>): Promise<string | null> => {
+    if (!cloud) return 'Sign in to use spaces'
+    const { data, error } = await cloud.rpc(fn, args)
+    if (error) return error.message
+    await loadSpaces()
+    switchSpace((data as { id: string }).id)
+    return null
+  }
+  const leaveSpace = async (id: string) => {
+    if (!cloud || !user.current) return
+    await cloud.from('space_members').delete().eq('space_id', id).eq('user_id', user.current)
+    if (spaceId === id) switchSpace(null)
+    await loadSpaces()
+  }
+
   const oauth = (calendar: boolean) => {
     if (!cloud) return
     if (calendar) ls.set('pursuit:gcal-wanted', '1')
@@ -228,7 +423,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  const set = useCallback((f: (s: State) => State) => setS(f), [])
+  const set = useCallback((f: (s: State) => State) => {
+    if (!inSpaceRef.current) return setS(f)
+    setSp((prev) => {
+      if (!prev) return prev
+      const next = f(compose(prev))
+      return { id: prev.id, doc: pickShared(next), view: pickView(next) }
+    })
+  }, [])
   const dismiss = useCallback((id: string) => setToasts((t) => t.filter((x) => x.id !== id)), [])
   const toast = useCallback(
     (msg: string, action?: Toast['action']) => {
@@ -240,8 +442,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   )
 
   const value: Ctx = {
-    s,
+    s: inSpace ? compose(sp!) : s,
     set,
+    spaces,
+    spaceId,
+    space: spaces.find((x) => x.id === spaceId) ?? null,
+    spaceLoading: auth.status === 'in' && !!spaceId && !inSpace,
+    by: inSpace ? (auth.name ?? '').split(' ')[0] || undefined : undefined,
+    switchSpace,
+    createSpace: (name) => spaceRpc('create_space', { p_name: name }),
+    joinSpace: (code) => spaceRpc('join_space', { p_code: code }),
+    leaveSpace,
     toast,
     toasts,
     dismiss,
@@ -257,6 +468,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         /* ignore */
       }
       ls.del(GUEST)
+      ls.del(SPACE)
+      setSpaceId(null)
       cloud?.auth.signOut()
     },
     useAsGuest: () => {

@@ -3,7 +3,26 @@ import { initialState, useStore } from './store'
 import { today } from './dates'
 
 export function Settings({ showTutorial }: { showTutorial: () => void }) {
-  const { s, set, toast, auth, sync, canSignIn, signIn, signOut } = useStore()
+  const { s, set, toast, auth, sync, canSignIn, signIn, signOut, spaces, spaceId, space, switchSpace, createSpace, joinSpace, leaveSpace } = useStore()
+  const [newName, setNewName] = useState('')
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [confirmLeave, setConfirmLeave] = useState<string | null>(null)
+  const run = async (fn: () => Promise<string | null>, ok: string) => {
+    setBusy(true)
+    const err = await fn()
+    setBusy(false)
+    toast(err ?? ok)
+    if (!err) (setNewName(''), setCode(''))
+  }
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast('Code copied')
+    } catch {
+      toast(`Code: ${text}`)
+    }
+  }
   const [confirmReset, setConfirmReset] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -65,6 +84,58 @@ export function Settings({ showTutorial }: { showTutorial: () => void }) {
       </div>
 
       <div className="field">
+        <span>Spaces</span>
+        <small className="muted">A space is a shared workspace: everyone in it sees the same goals, milestones, tasks and logs. Share its code with people who have signed in to Pursuit so they can join.</small>
+        {auth.status !== 'in' ? (
+          <small className="muted">Sign in to create or join a space.</small>
+        ) : (
+          <>
+            {spaces.map((x) => (
+              <div key={x.id} className={`space-row ${x.id === spaceId ? 'on' : ''}`}>
+                <div className="space-main">
+                  <b>{x.name}</b>
+                  <span className="muted small">
+                    {x.members.length} member{x.members.length === 1 ? '' : 's'}: {x.members.join(', ')}
+                  </span>
+                </div>
+                <button className="code-chip" title="Copy the join code" onClick={() => copy(x.code)}>
+                  {x.code}
+                </button>
+                {x.id === spaceId ? (
+                  <button className="secondary small-btn" onClick={() => switchSpace(null)}>
+                    Back to Personal
+                  </button>
+                ) : (
+                  <button className="secondary small-btn" onClick={() => switchSpace(x.id)}>
+                    Open
+                  </button>
+                )}
+                <button
+                  className="danger small-btn"
+                  onBlur={() => setConfirmLeave(null)}
+                  onClick={() => (confirmLeave === x.id ? (leaveSpace(x.id), setConfirmLeave(null), toast(`Left ${x.name}`)) : setConfirmLeave(x.id))}
+                >
+                  {confirmLeave === x.id ? 'Click again to leave' : 'Leave'}
+                </button>
+              </div>
+            ))}
+            <div className="add-task">
+              <input placeholder="New space name, e.g. Team launch" value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && newName.trim() && run(() => createSpace(newName.trim()), 'Space created')} />
+              <button className="primary" disabled={busy || !newName.trim()} onClick={() => run(() => createSpace(newName.trim()), 'Space created')}>
+                Create
+              </button>
+            </div>
+            <div className="add-task">
+              <input placeholder="Have a code? Enter it here" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} onKeyDown={(e) => e.key === 'Enter' && code.trim() && run(() => joinSpace(code.trim()), 'Joined the space')} />
+              <button className="secondary" disabled={busy || !code.trim()} onClick={() => run(() => joinSpace(code.trim()), 'Joined the space')}>
+                Join
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="field">
         <span>Help</span>
         <div className="btn-row">
           <button className="secondary" onClick={showTutorial}>
@@ -74,17 +145,19 @@ export function Settings({ showTutorial }: { showTutorial: () => void }) {
       </div>
 
       <div className="field">
-        <span>Your data</span>
-        <small className="muted">Export a backup file, or restore one.</small>
+        <span>{space ? `Data in “${space.name}”` : 'Your data'}</span>
+        <small className="muted">{space ? 'Export a backup of this space. Import and reset are turned off in shared spaces so nobody wipes the team’s work by accident.' : 'Export a backup file, or restore one.'}</small>
         <div className="btn-row">
           <button className="secondary" onClick={exportData}>
             Export backup
           </button>
-          <button className="secondary" onClick={() => fileRef.current?.click()}>
-            Import backup
-          </button>
+          {!space && (
+            <button className="secondary" onClick={() => fileRef.current?.click()}>
+              Import backup
+            </button>
+          )}
           <input ref={fileRef} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])} />
-          <button
+          {!space && <button
             className="danger"
             onBlur={() => setConfirmReset(false)}
             onClick={() => {
@@ -94,7 +167,7 @@ export function Settings({ showTutorial }: { showTutorial: () => void }) {
             }}
           >
             {confirmReset ? 'Click again to erase everything' : 'Reset all data'}
-          </button>
+          </button>}
         </div>
       </div>
     </div>

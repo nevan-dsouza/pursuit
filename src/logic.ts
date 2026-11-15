@@ -47,7 +47,7 @@ export function commitTimer(s: State): State {
   const ms = timerElapsed(s, Date.now())
   const t = s.tasks.find((x) => x.id === s.timer!.taskId)
   if (!t) return { ...s, timer: null }
-  const sessions = ms >= 1000 ? [...(s.sessions ?? []), { date: today(), ms, goalId: t.goalId }] : (s.sessions ?? [])
+  const sessions = ms >= 1000 ? [...(s.sessions ?? []), { id: uid(), date: today(), ms, goalId: t.goalId }] : (s.sessions ?? [])
   return { ...updateTask(s, t.id, { timeMs: t.timeMs + ms }), sessions, timer: null }
 }
 
@@ -102,13 +102,13 @@ export function todayList(s: State): Task[] {
  *  - each POA line becomes a new task right after this one in the goal's queue
  *  - In progress keeps it in Today, Skip removes it for today, Done completes it
  */
-export function finishWork(s0: State, taskId: string, outcome: Outcome): { state: State; created: number; logged: boolean } {
+export function finishWork(s0: State, taskId: string, outcome: Outcome, by?: string): { state: State; created: number; logged: boolean } {
   let s = commitTimer(s0)
   const t = s.tasks.find((x) => x.id === taskId)
   if (!t) return { state: s, created: 0, logged: false }
 
   const notes = t.notesDraft.trim()
-  if (notes) s = { ...s, logs: [...s.logs, { id: uid(), goalId: t.goalId, date: today(), text: notes, taskId: t.id, createdAt: Date.now() }] }
+  if (notes) s = { ...s, logs: [...s.logs, { id: uid(), goalId: t.goalId, date: today(), text: notes, taskId: t.id, createdAt: Date.now(), ...(by ? { by } : {}) }] }
 
   const ids = queue(s, t.goalId).map((x) => x.id)
   const created = poaLines(t.poaDraft).map((title) => newTask(t.goalId, title, { parentId: t.id, milestoneId: t.milestoneId }))
@@ -121,7 +121,7 @@ export function finishWork(s0: State, taskId: string, outcome: Outcome): { state
   if (outcome === 'skip') s = patchToday(s, (td) => ({ ...td, skipped: [...td.skipped, t.id], extra: td.extra.filter((x) => x !== t.id) }))
   if (outcome === 'done') {
     order = order.filter((x) => x !== t.id)
-    s = updateTask(s, t.id, { status: 'done', inProgress: false, completedAt: Date.now() })
+    s = updateTask(s, t.id, { status: 'done', inProgress: false, completedAt: Date.now(), ...(by ? { doneBy: by } : {}) })
     s = patchToday(s, (td) => ({ ...td, extra: td.extra.filter((x) => x !== t.id) }))
   }
   s = setQueue(s, order)

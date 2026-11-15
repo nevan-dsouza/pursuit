@@ -68,7 +68,7 @@ export function Goals() {
 }
 
 function GoalDetail({ goal }: { goal: Goal }) {
-  const { s, set, toast } = useStore()
+  const { s, set, toast, by } = useStore()
   const t = today()
   const clamp = (d: string) => (d < goal.startDate ? goal.startDate : d > goal.deadline ? goal.deadline : d)
   const [day, setDay] = useState(clamp(t))
@@ -98,7 +98,7 @@ function GoalDetail({ goal }: { goal: Goal }) {
   }
   const addLog = () => {
     if (!logText.trim()) return
-    set((st) => ({ ...st, logs: [...st.logs, { id: uid(), goalId: goal.id, date: day, text: logText.trim(), taskId: null, createdAt: Date.now() }] }))
+    set((st) => ({ ...st, logs: [...st.logs, { id: uid(), goalId: goal.id, date: day, text: logText.trim(), taskId: null, createdAt: Date.now(), ...(by ? { by } : {}) }] }))
     setLogText('')
   }
   const addTask = () => {
@@ -179,6 +179,7 @@ function GoalDetail({ goal }: { goal: Goal }) {
               {dayLogs.map((l) => (
                 <div key={l.id} className="line-item log-item">
                   <span>
+                    {l.by && <span className="log-by">{l.by} · </span>}
                     {l.taskId && <span className="log-src">{taskTitle(l.taskId) ?? 'Task'} · </span>}
                     {l.text}
                   </span>
@@ -256,7 +257,7 @@ function GoalDetail({ goal }: { goal: Goal }) {
                   <button className={`icon ${x.important ? 'i-on' : ''}`} title="Important" onClick={() => set((st) => updateTask(st, x.id, { important: !x.important }))}>
                     {x.important ? '★' : '☆'}
                   </button>
-                  <button className="icon" title="Mark done" onClick={() => set((st) => updateTask(st, x.id, { status: 'done', completedAt: Date.now() }))}>
+                  <button className="icon" title="Mark done" onClick={() => set((st) => updateTask(st, x.id, { status: 'done', completedAt: Date.now(), ...(by ? { doneBy: by } : {}) }))}>
                     ✓
                   </button>
                   <button
@@ -283,7 +284,7 @@ function GoalDetail({ goal }: { goal: Goal }) {
                 done.map((x) => (
                   <div key={x.id} className="q-item done-item">
                     <span className="struck">{x.title}</span>
-                    {x.timeMs > 0 && <span className="took">took {fmtDur(x.timeMs)}</span>}
+                    <span className="took">{[x.doneBy && `by ${x.doneBy}`, x.timeMs > 0 && `took ${fmtDur(x.timeMs)}`].filter(Boolean).join(' · ')}</span>
                     <button className="icon" title="Reopen" onClick={() => set((st) => ({ ...updateTask(st, x.id, { status: 'open', completedAt: null, order: -Date.now() }) }))}>
                       ↺
                     </button>

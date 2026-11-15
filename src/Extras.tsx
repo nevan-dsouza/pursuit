@@ -41,6 +41,7 @@ const STEPS: { title: string; body: string; where?: string }[] = [
   { title: '4. Work from Home', body: 'Home lists every open task from all your goals in one place, most urgent first: crucial, then important, then nearest deadline. Drag to set your own order. Click a task to focus on it, then pick In progress, Skip (not today) or Done.', where: 'Home' },
   { title: '5. Notes and POA', body: 'Notes record what you did; they are saved as a log on today’s box, and the more you log the brighter purple it gets. POA is your next plan of action: each line you write becomes a new task in that goal’s queue.', where: 'Home → Notes / POA (top right)' },
   { title: '6. Timer, streak and stats', body: 'Start the small timer (bottom right) when you begin; the time is saved to the task. Do something every day to grow your streak, and open Stats to see how you are doing.', where: 'Flame icon in the top bar → Stats' },
+  { title: '7. Work with others', body: 'Create a space to share goals and tasks with other people. Give them the space code; once they join, everyone sees the same goals and tasks and changes appear for all members. Switch between Personal and your spaces from the top bar.', where: 'Settings → Spaces' },
 ]
 
 export function Tutorial({ onClose }: { onClose: () => void }) {
@@ -81,7 +82,7 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
 /* ---------- Stats ---------- */
 
 export function Stats({ go }: { go: (v: View) => void }) {
-  const { s } = useStore()
+  const { s, space } = useStore()
   const st = streaks(s)
   const week = recentDays(s, 7)
   const two = recentDays(s, 14)
@@ -95,7 +96,7 @@ export function Stats({ go }: { go: (v: View) => void }) {
 
   return (
     <div className="page">
-      <h2>Stats</h2>
+      <h2>Stats{space ? ` · ${space.name}` : ''}</h2>
 
       <div className={`streak-card ${st.current ? 'lit' : ''}`}>
         <div className="streak-num">

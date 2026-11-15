@@ -17,7 +17,7 @@ const fromHash = (): View => {
 }
 
 export default function App() {
-  const { s, set, toasts, dismiss, auth, sync, loaded } = useStore()
+  const { s, set, toasts, dismiss, auth, sync, loaded, spaces, spaceId, space, spaceLoading, switchSpace } = useStore()
   const [view, setView] = useState<View>(fromHash)
   const [now, setNow] = useState(Date.now())
   const [tutorial, setTutorial] = useState(false)
@@ -82,6 +82,22 @@ export default function App() {
             Stats
           </button>
         </div>
+        {auth.status === 'in' && (
+          <select
+            className={`space-select ${spaceId ? 'shared' : ''}`}
+            title="Switch between your personal workspace and shared spaces"
+            value={spaceId ?? ''}
+            onChange={(e) => (e.target.value === '__manage' ? go('settings') : switchSpace(e.target.value || null))}
+          >
+            <option value="">Personal</option>
+            {spaces.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+            <option value="__manage">New or join a space…</option>
+          </select>
+        )}
         <button className={`streak-chip ${streak.activeToday ? 'lit' : ''} ${view === 'stats' ? 'on' : ''}`} onClick={() => go('stats')} title={`${streak.current}-day streak · open stats`}>
           <Flame /> {streak.current}
         </button>
@@ -90,10 +106,16 @@ export default function App() {
         </button>
       </nav>
       <main>
-        {view === 'home' && <Home go={go} now={now} />}
-        {view === 'goals' && <Goals />}
+        {spaceLoading && view !== 'settings' && view !== 'meetings' ? (
+          <div className="splash small-splash">Opening {space?.name ?? 'space'}…</div>
+        ) : (
+          <>
+            {view === 'home' && <Home go={go} now={now} />}
+            {view === 'goals' && <Goals />}
+            {view === 'stats' && <Stats go={go} />}
+          </>
+        )}
         {view === 'meetings' && <Meetings />}
-        {view === 'stats' && <Stats go={go} />}
         {view === 'settings' && <Settings showTutorial={() => setTutorial(true)} />}
       </main>
       {showTutorial && <Tutorial onClose={closeTutorial} />}

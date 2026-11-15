@@ -22,6 +22,7 @@ export interface Log {
   date: string
   text: string
   taskId: string | null
+  by?: string // who wrote it (spaces only)
   createdAt: number
 }
 
@@ -41,6 +42,7 @@ export interface Task {
   timeMs: number
   createdAt: number
   completedAt: number | null
+  doneBy?: string // who finished it (spaces only)
 }
 
 /** Timer for the task currently shown on Home. */
@@ -60,6 +62,7 @@ export interface TodayState {
 
 /** One stopped timer session, dated so stats can show focus time per day. */
 export interface Session {
+  id?: string
   date: string
   ms: number
   goalId: string

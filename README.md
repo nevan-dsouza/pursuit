@@ -35,3 +35,4 @@ npm run dev        # http://localhost:5173
 - Tasks can link to a milestone; the milestone shows tasks done / total
 - **Streak**: a day counts if you finish a task, write a log, or run a timer session. Stats page: streaks, focus time, 14-day chart, per-goal progress.
 - **Tutorial**: shown on first run; reopen from Settings → Show tutorial.
+- **Spaces**: shared workspaces. Settings → Spaces to create one (you get an 8-character code) or join with a code; switch between Personal and spaces from the top bar. Members share goals, milestones, tasks, logs and focus time; each person keeps their own list order, focus and timer. Simultaneous edits are merged item by item (`src/spaces.ts`).

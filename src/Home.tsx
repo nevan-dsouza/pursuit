@@ -5,7 +5,7 @@ import { daysLeftLabel, diffDays, fmtClock, fmtDay, fmtDur, keyOf, today } from 
 import { commitTimer, finishWork, newTask, patchToday, queue, taskDue, timerElapsed, todayList, todayState, updateTask, type Outcome } from './logic'
 
 export function Home({ go, now }: { go: (v: View) => void; now: number }) {
-  const { s, set, toast } = useStore()
+  const { s, set, toast, by } = useStore()
   const [panel, setPanel] = useState<null | 'notes' | 'poa'>(null)
   const [adding, setAdding] = useState(false)
   const [title, setTitle] = useState('')
@@ -40,7 +40,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
     const i = list.findIndex((t) => t.id === task.id)
     const next = outcome === 'progress' ? list[(i + 1) % list.length] : (list[i + 1] ?? list[i - 1])
     const spent = task.timeMs + (s.timer?.taskId === task.id ? timerElapsed(s, Date.now()) : 0)
-    const r = finishWork(s, task.id, outcome)
+    const r = finishWork(s, task.id, outcome, by)
     set(() => ({ ...r.state, focusId: next?.id ?? null }))
     const label = outcome === 'done' ? (spent > 0 ? `Done · took ${fmtDur(spent)}` : 'Done') : outcome === 'skip' ? 'Skipped for today' : 'Progress saved'
     toast([label, r.logged && 'notes logged', r.created && `${r.created} new task${r.created > 1 ? 's' : ''} from POA`].filter(Boolean).join(' · '))
@@ -102,6 +102,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
           <span>Today</span>
           <span className="muted small">{fmtDay(t0)}</span>
         </div>
+        <div className="tl-scroll">
         {list.map((t, i) => (
           <div
             key={t.id}
@@ -149,6 +150,8 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
             </button>
           </div>
         ))}
+        </div>
+        {list.length > 5 && <div className="tl-count">{list.length} tasks · scroll for more</div>}
         {!list.length && <div className="muted small pad-y">Nothing lined up for today.</div>}
         {list.length > 1 && (
           <div className="tl-order">
@@ -203,7 +206,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
             {doneToday.map((t) => (
               <div key={t.id} className="tl-done">
                 <span className="struck">{t.title}</span>
-                {t.timeMs > 0 && <span className="took">{fmtDur(t.timeMs)}</span>}
+                <span className="took">{[t.doneBy, t.timeMs > 0 && fmtDur(t.timeMs)].filter(Boolean).join(' · ')}</span>
               </div>
             ))}
           </>
