@@ -2068,3 +2068,69 @@ code {
     padding: 10px 2px;
   }
 }
+
+/* ---- sidebar body; when collapsed it opens over the page on hover ---- */
+.side-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  position: relative;
+}
+.side-strip {
+  display: none;
+}
+@media (min-width: 761px) {
+  .home.side-collapsed .today-list {
+    padding: 0;
+    align-items: stretch;
+  }
+  .home.side-collapsed .side-strip {
+    display: grid;
+    place-items: start center;
+    padding-top: 18px;
+    color: var(--muted);
+    height: 100%;
+    font-size: 13px;
+  }
+  .home.side-collapsed .side-body {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 310px;
+    min-height: 100%;
+    padding: 18px 12px;
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    box-shadow: 18px 0 40px rgba(0, 0, 0, 0.45);
+    z-index: 8;
+  }
+  .home.side-collapsed .today-list:hover .side-body {
+    display: flex;
+  }
+  .home.side-collapsed .side-body .side-toggle {
+    position: absolute;
+    top: 14px;
+    right: 10px;
+  }
+  .home:not(.side-collapsed) .side-body .side-toggle {
+    top: -4px;
+    right: -2px;
+  }
+}
+@media (max-width: 760px) {
+  /* phones have no hover: the button simply shows or hides the list */
+  .home.side-collapsed .side-body > :not(.side-toggle) {
+    display: none;
+  }
+  .home.side-collapsed .side-body {
+    align-items: flex-end;
+  }
+  .home.side-collapsed .side-body .side-toggle {
+    position: static;
+  }
+  .side-body .side-toggle {
+    top: -2px;
+    right: 0;
+  }
+}

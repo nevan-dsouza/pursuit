@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore, uid, type Ws } from './store'
 import { SpacePicker } from './SpaceUI'
+import { SPACES } from './config'
 import type { Goal } from './types'
 import { daysLeftLabel, fmtDay, fmtDur, today } from './dates'
 import { doneTasks, logsByDay, newTask, queue, setQueue, updateTask } from './logic'
@@ -47,8 +48,12 @@ export function Goals() {
           + New goal
         </button>
 
-        <div className="side-label space-label">Space</div>
-        <SpacePicker />
+        {SPACES && (
+          <>
+            <div className="side-label space-label">Space</div>
+            <SpacePicker />
+          </>
+        )}
         {team && (
           <>
             {team.s.goals.map((g) => item('team', g))}

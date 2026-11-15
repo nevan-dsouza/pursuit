@@ -35,5 +35,5 @@ npm run dev        # http://localhost:5173
 - Tasks can link to a milestone; the milestone shows tasks done / total
 - **Streak**: a day counts if you finish a task, write a log, or run a timer session. Stats page: streaks, focus time, 14-day chart, per-goal progress.
 - **Tutorial**: shown on first run; reopen from Settings → Show tutorial.
-- **Spaces**: shared workspaces. The Spaces page lists your spaces with **+ New Space** and **Join space** (8-character code) on the right. On Home, a dropdown under "Space tasks" picks which space's tasks show below your own; the same dropdown on Goals shows that space's goals. Members share goals, milestones, tasks, logs and focus time; each person keeps their own list order, focus and timer. Simultaneous edits are merged item by item (`src/spaces.ts`).
+- **Spaces (switched off)**: shared workspaces joined by code are built but hidden to keep the app simple. Set `SPACES = true` in `src/config.ts` to bring back the Spaces page and the space dropdowns on Home and Goals. The Supabase tables and rules for them are still in place.
 - **Testing spaces without signing in**: `VITE_FAKE_SPACE=1 npx vite build` makes a test build with a local-only space (seed it via `localStorage["pursuit:fake-space"]`). The flag is compiled out of normal builds.

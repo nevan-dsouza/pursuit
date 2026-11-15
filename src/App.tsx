@@ -9,6 +9,7 @@ import { Meetings } from './Meetings'
 import { Settings } from './Settings'
 import { Brand } from './Brand'
 import { Spaces } from './SpaceUI'
+import { SPACES } from './config'
 import { Flame, Login, Stats, Tutorial } from './Extras'
 
 const VIEWS: View[] = ['home', 'goals', 'meetings', 'spaces', 'stats', 'settings']
@@ -68,7 +69,7 @@ export default function App() {
     ['home', 'Home'],
     ['goals', 'Goals'],
     ['meetings', 'Meetings'],
-    ['spaces', 'Spaces'],
+    ...(SPACES ? ([['spaces', 'Spaces']] as [View, string][]) : []),
   ]
 
   return (
@@ -95,7 +96,7 @@ export default function App() {
       <main>
         {view === 'home' && <Home go={go} now={now} />}
         {view === 'goals' && <Goals />}
-        {view === 'spaces' && <Spaces />}
+        {view === 'spaces' && (SPACES ? <Spaces /> : <Home go={go} now={now} />)}
         {view === 'stats' && <Stats go={go} />}
         {view === 'settings' && <Settings showTutorial={() => setTutorial(true)} />}
       </main>

@@ -4,6 +4,7 @@ import type { Task, View } from './types'
 import { daysLeftLabel, diffDays, fmtClock, fmtDay, fmtDur, keyOf, today } from './dates'
 import { commitTimer, finishWork, newTask, patchToday, taskDue, timerElapsed, todayList, todayState, updateTask, type Outcome } from './logic'
 import { SpacePicker } from './SpaceUI'
+import { SPACES } from './config'
 
 type Kind = 'mine' | 'team'
 const tone = (t: { crucial: boolean; important: boolean }) => (t.crucial ? 'crucial' : t.important ? 'important' : '')
@@ -220,10 +221,15 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
   return (
     <div className={`home ${panel ? 'with-panel' : ''} ${collapsed ? 'side-collapsed' : ''}`}>
       <aside className="today-list">
-        <button className="side-toggle" onClick={toggleSide} title={collapsed ? 'Show the task list' : 'Hide the task list'} aria-label={collapsed ? 'Show the task list' : 'Hide the task list'}>
-          {collapsed ? '»' : '«'}
-        </button>
-        {!collapsed && (
+        {collapsed && (
+          <button className="side-strip" onClick={toggleSide} title="Show the task list" aria-label="Show the task list">
+            »
+          </button>
+        )}
+        <div className="side-body">
+          <button className="side-toggle" onClick={toggleSide} title={collapsed ? 'Keep the task list open' : 'Collapse the task list'} aria-label={collapsed ? 'Keep the task list open' : 'Collapse the task list'}>
+            {collapsed ? '»' : '«'}
+          </button>
           <>
             <div className="tl-head">
               <span>My tasks</span>
@@ -231,11 +237,16 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
             </div>
             <TaskGroup ws={mine} list={lists.mine} curId={cur?.k === 'mine' ? cur.id : undefined} onFocus={(id) => doFocus('mine', id)} emptyText={mine.s.goals.length ? 'No open tasks of your own.' : 'Create a goal to add your own tasks.'} />
 
-            <div className="tl-head tl-space-head">
-              <span>Space tasks</span>
-            </div>
-            <SpacePicker />
-            {auth.status === 'in' &&
+            {SPACES && (
+              <>
+                <div className="tl-head tl-space-head">
+                  <span>Space tasks</span>
+                </div>
+                <SpacePicker />
+              </>
+            )}
+            {SPACES &&
+              auth.status === 'in' &&
               (team ? (
                 <TaskGroup ws={team} list={lists.team} curId={cur?.k === 'team' ? cur.id : undefined} onFocus={(id) => doFocus('team', id)} emptyText={team.s.goals.length ? 'No open tasks in this space.' : 'No goals in this space yet. Add one on the Goals page.'} />
               ) : spaceLoading ? (
@@ -256,7 +267,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
               </>
             )}
           </>
-        )}
+        </div>
       </aside>
 
       <section className="stage">

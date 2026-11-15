@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import type { State } from './types'
 import { emptyShared, merge3, normShared, pickShared, pickView, type Shared, type ViewState } from './spaces'
 import { cloud } from './cloud'
+import { SPACES } from './config'
 
 /**
  * State lives in memory, is saved to this browser on every change, and (when signed in)
@@ -165,7 +166,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // ----- shared spaces -----
   const [spaces, setSpaces] = useState<SpaceInfo[]>(FAKE ? [{ id: 'fake', name: 'Launch team', code: 'ABCD2345', owner: 'me', members: ['Test User', 'Priya'] }] : [])
-  const [spaceId, setSpaceId] = useState<string | null>(() => (FAKE ? 'fake' : cloud ? ls.get(SPACE) : null))
+  const [spaceId, setSpaceId] = useState<string | null>(() => (!SPACES ? null : FAKE ? 'fake' : cloud ? ls.get(SPACE) : null))
   const [sp, setSp] = useState<OpenSpace | null>(() => (FAKE ? { id: 'fake', doc: normShared(JSON.parse(ls.get('pursuit:fake-space') ?? '{}')), view: emptyView() } : null))
   const spRef = useRef<OpenSpace | null>(null)
   spRef.current = sp
@@ -173,7 +174,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const spVersion = useRef(0)
   const spBusy = useRef(false)
   const spTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const inSpace = !!(sp && spaceId && sp.id === spaceId && auth.status === 'in')
+  const inSpace = SPACES && !!(sp && spaceId && sp.id === spaceId && auth.status === 'in')
 
   // always keep a copy on this device
   useEffect(() => ls.set(KEY, JSON.stringify(s)), [s])
@@ -275,7 +276,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [auth.status, pull])
 
   const loadSpaces = useCallback(async () => {
-    if (!cloud || !user.current) return
+    if (!SPACES || !cloud || !user.current) return
     const [a, b] = await Promise.all([cloud.from('spaces').select('id, name, code, owner'), cloud.from('space_members').select('space_id, display_name')])
     if (a.error || b.error) return
     const list: SpaceInfo[] = (a.data ?? []).map((x) => ({ ...x, members: (b.data ?? []).filter((m) => m.space_id === x.id).map((m) => m.display_name) }))
