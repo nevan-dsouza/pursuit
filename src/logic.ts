@@ -136,9 +136,17 @@ export function logsByDay(s: State, goalId: string) {
 
 /* ---------- Streaks and stats ---------- */
 
-/** A day counts as active if you logged something, finished a task, or ran a timer session. */
+/**
+ * A day counts as active if you did anything in Pursuit: added a goal, milestone or task, worked on or
+ * finished a task, wrote a log, or ran the timer. Days are also remembered in `activeDates`, so deleting
+ * a goal later doesn't break the streak.
+ */
 export function activeDays(s: State) {
-  const d = new Set<string>()
+  const d = new Set<string>(s.activeDates ?? [])
+  const stamp = (ts?: number | null) => ts && d.add(keyOf(new Date(ts)))
+  for (const g of s.goals) stamp(g.createdAt)
+  for (const m of s.milestones) stamp(m.createdAt)
+  for (const t of s.tasks) stamp(t.createdAt)
   for (const l of s.logs) d.add(l.date)
   for (const x of s.sessions ?? []) d.add(x.date)
   for (const t of s.tasks) if (t.status === 'done' && t.completedAt) d.add(keyOf(new Date(t.completedAt)))

@@ -8,10 +8,9 @@ import { SPACES } from './config'
 
 type Kind = 'mine' | 'team'
 const tone = (t: { crucial: boolean; important: boolean }) => (t.crucial ? 'crucial' : t.important ? 'important' : '')
-const SIDE = 'pursuit:side-collapsed'
 
-/** One group of tasks in the sidebar: your own, or the selected space's. */
-function TaskGroup({ ws, list, curId, onFocus, emptyText }: { ws: Ws; list: Task[]; curId?: string; onFocus: (id: string) => void; emptyText: string }) {
+/** One group of tasks: your own, or the selected space's. Used in the sidebar, and under the task on phones. */
+export function TaskGroup({ ws, list, curId, onFocus, emptyText }: { ws: Ws; list: Task[]; curId?: string; onFocus: (id: string) => void; emptyText: string }) {
   const { toast } = useStore()
   const { s, set } = ws
   const [adding, setAdding] = useState(false)
@@ -98,7 +97,7 @@ function TaskGroup({ ws, list, curId, onFocus, emptyText }: { ws: Ws; list: Task
         ))}
       </div>
       {!list.length && <div className="muted small tl-empty">{emptyText}</div>}
-      {list.length > 5 && <div className="tl-count">{list.length} tasks · scroll for more</div>}
+      {list.length > 5 && <div className="tl-count">{list.length} tasks<span className="tl-more"> · scroll for more</span></div>}
       {list.length > 1 && todayState(s).order && (
         <div className="tl-order">
           Your order ·{' '}
@@ -134,26 +133,11 @@ function TaskGroup({ ws, list, curId, onFocus, emptyText }: { ws: Ws; list: Task
   )
 }
 
-export function Home({ go, now }: { go: (v: View) => void; now: number }) {
-  const { mine, team, toast, auth, space, spaceId, spaceLoading } = useStore()
-  const [panel, setPanel] = useState<null | 'notes' | 'poa'>(null)
-  const [focus, setFocus] = useState<{ k: Kind; id: string } | null>(null)
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(SIDE) === '1'
-    } catch {
-      return false
-    }
-  })
-  const toggleSide = () => {
-    setCollapsed(!collapsed)
-    try {
-      localStorage.setItem(SIDE, collapsed ? '0' : '1')
-    } catch {
-      /* ignore */
-    }
-  }
+export type Focus = { k: Kind; id: string } | null
 
+export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => void; now: number; focus: Focus; onFocus: (k: Kind, id: string) => void; setFocus: (f: Focus) => void }) {
+  const { mine, team, toast, space } = useStore()
+  const [panel, setPanel] = useState<null | 'notes' | 'poa'>(null)
   const t0 = today()
   const lists: Record<Kind, Task[]> = { mine: todayList(mine.s), team: team ? todayList(team.s) : [] }
   const wsOf = (k: Kind): Ws | null => (k === 'team' ? team : mine)
@@ -170,11 +154,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
     if (mine.s.timer) mine.set((st) => commitTimer(st))
     if (team?.s.timer) team.set((st) => commitTimer(st, team.by))
   }
-  const doFocus = (k: Kind, id: string) => {
-    const open = mine.s.timer?.taskId ?? team?.s.timer?.taskId
-    if (open && open !== id) commitAll()
-    setFocus({ k, id })
-  }
+  const doFocus = onFocus
 
   const act = (outcome: Outcome) => {
     if (!task || !ws || !cur) return
@@ -219,57 +199,7 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
   const spentNow = task && s ? task.timeMs + (timer ? timerElapsed(s, now) : 0) : 0
 
   return (
-    <div className={`home ${panel ? 'with-panel' : ''} ${collapsed ? 'side-collapsed' : ''}`}>
-      <aside className="today-list">
-        {collapsed && (
-          <button className="side-strip" onClick={toggleSide} title="Show the task list" aria-label="Show the task list">
-            »
-          </button>
-        )}
-        <div className="side-body">
-          <button className="side-toggle" onClick={toggleSide} title={collapsed ? 'Keep the task list open' : 'Collapse the task list'} aria-label={collapsed ? 'Keep the task list open' : 'Collapse the task list'}>
-            {collapsed ? '»' : '«'}
-          </button>
-          <>
-            <div className="tl-head">
-              <span>My tasks</span>
-              <span className="muted small">{fmtDay(t0)}</span>
-            </div>
-            <TaskGroup ws={mine} list={lists.mine} curId={cur?.k === 'mine' ? cur.id : undefined} onFocus={(id) => doFocus('mine', id)} emptyText={mine.s.goals.length ? 'No open tasks of your own.' : 'Create a goal to add your own tasks.'} />
-
-            {SPACES && (
-              <>
-                <div className="tl-head tl-space-head">
-                  <span>Space tasks</span>
-                </div>
-                <SpacePicker />
-              </>
-            )}
-            {SPACES &&
-              auth.status === 'in' &&
-              (team ? (
-                <TaskGroup ws={team} list={lists.team} curId={cur?.k === 'team' ? cur.id : undefined} onFocus={(id) => doFocus('team', id)} emptyText={team.s.goals.length ? 'No open tasks in this space.' : 'No goals in this space yet. Add one on the Goals page.'} />
-              ) : spaceLoading ? (
-                <div className="muted small tl-empty">Opening {space?.name ?? 'space'}…</div>
-              ) : (
-                null
-              ))}
-
-            {doneToday.length > 0 && (
-              <>
-                <div className="side-label tl-done-label">Done today · {doneToday.length}</div>
-                {doneToday.map((t) => (
-                  <div key={t.id} className="tl-done">
-                    <span className="struck">{t.title}</span>
-                    <span className="took">{[t.doneBy, t.timeMs > 0 && fmtDur(t.timeMs)].filter(Boolean).join(' · ')}</span>
-                  </div>
-                ))}
-              </>
-            )}
-          </>
-        </div>
-      </aside>
-
+    <div className={`home ${panel ? 'with-panel' : ''}`}>
       <section className="stage">
         {task && s ? (
           <div className="task-view" key={task.id}>
@@ -313,6 +243,25 @@ export function Home({ go, now }: { go: (v: View) => void; now: number }) {
           </div>
         )}
       </section>
+
+      <div className="mobile-tasks">
+        <div className="tl-head">
+          <span>My tasks</span>
+          <span className="muted small">{fmtDay(t0)}</span>
+        </div>
+        <TaskGroup ws={mine} list={lists.mine} curId={cur?.k === 'mine' ? cur.id : undefined} onFocus={(id) => doFocus('mine', id)} emptyText={mine.s.goals.length ? 'No open tasks.' : 'Create a goal to add tasks.'} />
+        {doneToday.length > 0 && (
+          <>
+            <div className="side-label tl-done-label">Done today · {doneToday.length}</div>
+            {doneToday.map((t) => (
+              <div key={t.id} className="tl-done">
+                <span className="struck">{t.title}</span>
+                <span className="took">{t.timeMs > 0 ? fmtDur(t.timeMs) : ''}</span>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
 
       {task && ws && (
         <div className="panel-tabs">

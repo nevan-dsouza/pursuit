@@ -83,6 +83,8 @@ export interface State {
   focusId: string | null
   today: TodayState
   sessions: Session[]
+  /** days on which you did something in Pursuit; kept even if the goal or task is later deleted */
+  activeDates: string[]
   tutorialSeen: boolean
   settings: Settings
 }

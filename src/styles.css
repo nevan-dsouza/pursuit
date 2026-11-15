@@ -2309,6 +2309,267 @@ main > * {
   }
 }
 
+/* ================= app sidebar (logo, pages, tasks, streak, settings) ================= */
+.mobile-tasks {
+  display: none;
+}
+@media (min-width: 761px) {
+  .app {
+    --sb: 292px;
+    --rail: 56px;
+    display: grid;
+    grid-template-columns: var(--sb) minmax(0, 1fr);
+    min-height: 100vh;
+    transition: grid-template-columns var(--t) var(--ease);
+  }
+  .app.rail {
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+  }
+  .navbar {
+    display: none;
+  }
+  main {
+    min-width: 0;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    z-index: 30;
+  }
+  /* the panel itself: its width glides; the content inside keeps a fixed width so nothing re-wraps */
+  .sb-inner {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--sb);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    transition:
+      width var(--t) var(--ease),
+      box-shadow var(--t) ease;
+  }
+  .sb-inner > * {
+    width: var(--sb);
+    flex-shrink: 0;
+  }
+  .app.rail .sb-inner {
+    width: var(--rail);
+  }
+  .app.rail .sidebar:hover .sb-inner {
+    width: var(--sb);
+    box-shadow: 18px 0 40px rgba(0, 0, 0, 0.45);
+  }
+
+  .sb-top {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 58px;
+    padding: 0 10px 0 16px;
+  }
+  .sb-top .brand {
+    font-size: 23px;
+    flex: 1;
+    justify-content: flex-start;
+  }
+  .sb-mark {
+    position: absolute;
+    left: 10px;
+    top: 11px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font: italic 700 23px/1 'Kanit', Inter, sans-serif;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .sb-mark i {
+    position: absolute;
+    right: 5px;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--yellow);
+  }
+  .sb-mark:hover {
+    background: var(--surface-2);
+  }
+  .sb-toggle {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+  }
+  .sb-toggle:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .sb-ico {
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+  }
+
+  .sb-nav,
+  .sb-foot {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 10px;
+  }
+  .sb-foot {
+    padding: 8px 10px 12px;
+    border-top: 1px solid var(--border);
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 36px;
+    padding: 0 8.500px;
+    border-radius: 9px;
+    color: var(--muted);
+    text-align: left;
+    font-size: 14.500px;
+    white-space: nowrap;
+    transition:
+      background-color var(--t-fast) ease,
+      color var(--t-fast) ease,
+      max-width var(--t) var(--ease);
+  }
+  .sb-item:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .sb-item.on {
+    background: var(--surface-2);
+    color: #fff;
+  }
+  .sb-item.on .sb-ico {
+    color: var(--yellow);
+  }
+  .sb-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .sb-flame,
+  .sb-gear {
+    position: relative;
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+  }
+  .sb-flame .flame {
+    width: 19px;
+    height: 19px;
+    fill: var(--muted);
+    transition: fill var(--t) ease;
+  }
+  .sb-streak.lit .sb-flame .flame {
+    fill: #fb923c;
+  }
+  .sb-flame b {
+    position: absolute;
+    left: 13px;
+    top: -7px;
+    min-width: 15px;
+    padding: 0 3px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    font-size: 10px;
+    line-height: 13px;
+    text-align: center;
+    color: var(--text);
+  }
+  .sb-streak.lit .sb-flame b {
+    border-color: #fb923c;
+  }
+  .sb-gear .sync-dot {
+    position: absolute;
+    right: -3px;
+    top: -3px;
+  }
+
+  .sb-tasks {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 12px 8px;
+    margin-top: 6px;
+    border-top: 1px solid var(--border);
+    overflow-y: auto;
+  }
+  .sb-tasks .tl-scroll {
+    max-height: none;
+    flex: 0 1 auto;
+    overflow: visible;
+  }
+
+  /* collapsed: icons only; labels, wordmark and tasks fade out, and come back on hover */
+  .sb-label,
+  .sb-tasks,
+  .sb-top .brand,
+  .sb-toggle,
+  .sb-mark {
+    transition: opacity 0.2s ease;
+  }
+  .app.rail .sidebar:not(:hover) .sb-label,
+  .app.rail .sidebar:not(:hover) .sb-tasks,
+  .app.rail .sidebar:not(:hover) .sb-top .brand,
+  .app.rail .sidebar:not(:hover) .sb-toggle {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .app.rail .sidebar:not(:hover) .sb-mark {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .app.rail .sidebar:not(:hover) .sb-tasks {
+    overflow: hidden;
+  }
+
+  .sb-tasks .tl-more {
+    display: none;
+  }
+  .sb-item {
+    max-width: 100%;
+  }
+  .app.rail .sidebar:not(:hover) .sb-item {
+    max-width: 36px;
+  }
+
+  /* Home no longer carries its own task column */
+  .home,
+  .home.with-panel {
+    grid-template-columns: minmax(0, 1fr) var(--panel);
+  }
+}
+@media (max-width: 760px) {
+  .sidebar {
+    display: none;
+  }
+  .mobile-tasks {
+    display: block;
+    order: 3;
+    padding: 6px 16px 20px;
+  }
+}
+
 /* people who ask their device for less motion get none */
 @media (prefers-reduced-motion: reduce) {
   *,

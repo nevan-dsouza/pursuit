@@ -52,7 +52,7 @@ const STEPS: { title: string; body: string; where?: string }[] = [
   { title: '3. Add tasks', body: 'Tasks are small pieces of work you can finish in a sitting. They sit in a queue you can reorder. Mark a task ! crucial (red) or ★ important (pink) so it rises to the top of your day.', where: 'Goals → Tasks' },
   { title: '4. Work from Home', body: 'Home lists every open task from all your goals in one place, most urgent first: crucial, then important, then nearest deadline. Drag to set your own order. Click a task to focus on it, then pick In progress, Skip (not today) or Done.', where: 'Home' },
   { title: '5. Notes and POA', body: 'Notes record what you did; they are saved as a log on today’s box, and the more you log the brighter purple it gets. POA is your next plan of action: each line you write becomes a new task in that goal’s queue.', where: 'Home → Notes / POA (top right)' },
-  { title: '6. Timer, streak and stats', body: 'Start the small timer (bottom right) when you begin; the time is saved to the task. Do something every day to grow your streak, and open Stats to see how you are doing.', where: 'Flame icon in the top bar → Stats' },
+  { title: '6. Timer, streak and stats', body: 'Start the small timer (bottom right) when you begin; the time is saved to the task. Use Pursuit every day, even just to add or finish one task, and your streak grows. Open Stats to see how you are doing.', where: 'Flame in the sidebar → Stats' },
 ]
 
 export function Tutorial({ onClose }: { onClose: () => void }) {
@@ -131,7 +131,7 @@ export function Stats({ go }: { go: (v: View) => void }) {
           </b>
           <div className="muted small">
             {st.current === 0
-              ? 'Finish a task, write a log or run the timer today to start a streak.'
+              ? 'Do anything today, such as adding a task or finishing one, to start a streak.'
               : st.activeToday
                 ? 'Today is counted. Come back tomorrow to keep it going.'
                 : 'Do one thing today to keep it alive.'}

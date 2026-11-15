@@ -20,6 +20,11 @@ const CLIENT = Math.random().toString(36).slice(2) // identifies this tab's writ
 /** Test builds only (VITE_FAKE_SPACE=1): a signed-in user with one local space, no network. Compiled out of production. */
 const FAKE = import.meta.env.VITE_FAKE_SPACE === '1'
 
+const todayKey = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36)
 
 export function initialState(): State {
@@ -33,6 +38,7 @@ export function initialState(): State {
     focusId: null,
     today: { date: '', extra: [], skipped: [], order: null },
     sessions: [],
+    activeDates: [],
     tutorialSeen: false,
     settings: { googleClientId: '' },
   }
@@ -176,6 +182,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const spTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inSpace = SPACES && !!(sp && spaceId && sp.id === spaceId && auth.status === 'in')
 
+  const flush = useRef(async () => {})
+  flush.current = async () => {
+    if (pending.current) clearTimeout(pending.current)
+    pending.current = null
+    if (!cloud || !user.current) return
+    const stamp = new Date().toISOString()
+    const { error } = await cloud.from('user_state').upsert({ user_id: user.current, data: latest.current, client_id: CLIENT, updated_at: stamp })
+    if (!error) lastRemote.current = stamp
+    setSync(error ? 'offline' : 'synced')
+  }
+
   // always keep a copy on this device
   useEffect(() => ls.set(KEY, JSON.stringify(s)), [s])
 
@@ -188,14 +205,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     setSync('saving')
     if (pending.current) clearTimeout(pending.current)
-    pending.current = setTimeout(async () => {
-      pending.current = null
-      const stamp = new Date().toISOString()
-      const { error } = await cloud!.from('user_state').upsert({ user_id: user.current, data: latest.current, client_id: CLIENT, updated_at: stamp })
-      if (!error) lastRemote.current = stamp
-      setSync(error ? 'offline' : 'synced')
-    }, 700)
+    pending.current = setTimeout(() => flush.current(), 700)
   }, [s])
+
+  // leaving or hiding the tab: save straight away instead of waiting
+  useEffect(() => {
+    const now = () => pending.current && flush.current()
+    const onHide = () => document.visibilityState === 'hidden' && now()
+    document.addEventListener('visibilitychange', onHide)
+    window.addEventListener('pagehide', now)
+    return () => {
+      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('pagehide', now)
+    }
+  }, [])
 
   const pull = useCallback(async () => {
     const id = user.current
@@ -436,7 +459,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  const set = useCallback((f: (s: State) => State) => setS(f), [])
+  // every change you make goes through here, so this is where a day gets marked as active
+  const set = useCallback(
+    (f: (s: State) => State) =>
+      setS((prev) => {
+        const next = f(prev)
+        if (next === prev) return prev
+        const changed = next.goals !== prev.goals || next.tasks !== prev.tasks || next.milestones !== prev.milestones || next.logs !== prev.logs || next.sessions !== prev.sessions
+        const hasWork = next.goals.length + next.tasks.length + next.logs.length > 0
+        const day = todayKey()
+        if (!changed || !hasWork || (next.activeDates ?? []).includes(day)) return next
+        return { ...next, activeDates: [...(next.activeDates ?? []), day] }
+      }),
+    [],
+  )
   const setTeam = useCallback((f: (s: State) => State) => {
     setSp((prev) => {
       if (!prev) return prev
