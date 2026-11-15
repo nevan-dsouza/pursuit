@@ -9,11 +9,23 @@ import { Brand } from './Brand'
 
 export function Login() {
   const { signIn, useAsGuest } = useStore()
+  // Google or Supabase send people back here with an error in the address when sign-in is refused
+  const [error] = useState(() => {
+    const p = new URLSearchParams(location.hash.replace(/^#/, '') || location.search)
+    const msg = p.get('error_description') || p.get('error')
+    if (msg) history.replaceState(null, '', location.pathname)
+    return msg ? msg.replace(/\+/g, ' ') : ''
+  })
   return (
     <div className="login">
       <Brand />
       <h1>Chase big goals, one small task at a time.</h1>
       <p className="muted">Sign in to keep your goals, tasks and notes in sync on every device.</p>
+      {error && (
+        <div className="banner warn">
+          Sign-in didn’t go through: {error}. If Google said “access blocked”, the person who runs this app needs to add your Google address as a test user.
+        </div>
+      )}
       <button className="google-btn" onClick={signIn}>
         <svg viewBox="0 0 18 18" aria-hidden>
           <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z" />

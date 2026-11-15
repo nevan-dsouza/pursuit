@@ -3,9 +3,19 @@ import { useStore } from './store'
 
 /** Space selector + "+ New Space". Used in the Home and Goals sidebars. */
 export function SpacePicker() {
-  const { auth, spaces, spaceId, space, switchSpace, toast } = useStore()
-  const [modal, setModal] = useState(false)
-  if (auth.status !== 'in') return <div className="muted small space-note">Sign in to share goals and tasks in a space.</div>
+  const { auth, canSignIn, signIn, spaces, spaceId, space, switchSpace, toast } = useStore()
+  const [modal, setModal] = useState<null | 'create' | 'join'>(null)
+  if (auth.status !== 'in')
+    return (
+      <div className="space-note">
+        <div className="muted small">Spaces let you share goals and tasks. You need to be signed in to create one or join with a code.</div>
+        {canSignIn && (
+          <button className="new-space" onClick={signIn}>
+            Sign in with Google
+          </button>
+        )}
+      </div>
+    )
 
   const copy = async () => {
     if (!space) return
@@ -29,22 +39,25 @@ export function SpacePicker() {
           ))}
         </select>
       )}
-      <button className="new-space" onClick={() => setModal(true)}>
+      <button className="new-space" onClick={() => setModal('create')}>
         + New Space
+      </button>
+      <button className="new-space join" onClick={() => setModal('join')}>
+        Join with code
       </button>
       {space && (
         <button className="code-chip" onClick={copy} title={`Copy the code to invite people · ${space.members.join(', ')}`}>
           {space.code}
         </button>
       )}
-      {modal && <SpaceModal onClose={() => setModal(false)} />}
+      {modal && <SpaceModal start={modal} onClose={() => setModal(null)} />}
     </div>
   )
 }
 
-export function SpaceModal({ onClose }: { onClose: () => void }) {
+export function SpaceModal({ onClose, start = 'create' }: { onClose: () => void; start?: 'create' | 'join' }) {
   const { createSpace, joinSpace, spaces, spaceId, toast } = useStore()
-  const [tab, setTab] = useState<'create' | 'join'>('create')
+  const [tab, setTab] = useState<'create' | 'join'>(start)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -81,7 +94,7 @@ export function SpaceModal({ onClose }: { onClose: () => void }) {
         {made ? (
           <>
             <h2 className="modal-title">“{made.name}” is ready</h2>
-            <p>Share this code with people who have signed in to Pursuit. They enter it under + New Space → Join.</p>
+            <p>Share this code. The other person signs in to Pursuit with Google, clicks “Join with code” on Home and enters it.</p>
             <button className="code-big" onClick={() => copy(made.code)} title="Copy">
               {made.code}
             </button>
@@ -94,7 +107,7 @@ export function SpaceModal({ onClose }: { onClose: () => void }) {
           </>
         ) : (
           <>
-            <h2 className="modal-title">New Space</h2>
+            <h2 className="modal-title">{tab === 'join' ? 'Join a Space' : 'New Space'}</h2>
             <p>A space is a shared workspace. Everyone in it sees and works on the same goals and tasks.</p>
             <div className="seg">
               <button className={tab === 'create' ? 'on' : ''} onClick={() => (setTab('create'), setError(''))}>
