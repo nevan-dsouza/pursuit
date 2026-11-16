@@ -53,9 +53,9 @@ const STEPS: { title: string; body: string; where?: string }[] = [
   { title: '1. Set a goal', body: 'A goal is the big picture: something you want to achieve by a date, like “Pass the exam by 29 Nov”. Creating one draws a grid with a box for every day until the deadline.', where: 'Goals → New goal' },
   { title: '2. Mark milestones', body: 'Milestones are targets along the way. Click any day on the grid and type one. That day gets a blue outline with a white dot; the goal itself is the green diamond; today has a pink outline.', where: 'Goals → click a day on the grid' },
   { title: '3. Add tasks', body: 'Tasks are small pieces of work you can finish in a sitting. They sit in a queue you can reorder. Mark a task ! crucial (red) or ★ important (pink) so it rises to the top of your day.', where: 'Goals → Tasks' },
-  { title: '4. Work from Home', body: 'Home lists every open task from all your goals in one place, most urgent first: crucial, then important, then nearest deadline. Drag to set your own order. Click a task to focus on it, then pick In progress, Skip (not today) or Done.', where: 'Home' },
-  { title: '5. Notes and POA', body: 'Notes record what you did; they are saved as a log on today’s box, and the more you log the brighter purple it gets. POA is your next plan of action: each line you write becomes a new task in that goal’s queue.', where: 'Home → Notes / POA (top right)' },
-  { title: '6. Timer, streak and stats', body: 'Start the small timer (bottom right) when you begin; the time is saved to the task. Use Pursuit every day, even just to add or finish one task, and your streak grows. Open Stats to see how you are doing.', where: 'Flame in the sidebar → Stats' },
+  { title: '4. Work from Home', body: 'Home lists every open task from all your goals in one place, most urgent first: crucial, then important, then nearest deadline. Drag to set your own order. Click a task to focus on it. Press Start to time it, then pick Skip (not today) or Done.', where: 'Home' },
+  { title: '5. Log, Notes and POA', body: 'Got something done? Open Log, type one line and press Enter; each log makes today’s box on the goal a brighter purple. Notes are optional, for more detail. POA is your plan of action: one step per box, and any step can become a task.', where: 'Home → Log / Notes / POA (top right)' },
+  { title: '6. Timer, streak and stats', body: 'Press Start on a task when you begin; the time is saved to the task. Use Pursuit every day, even just to add or finish one task, and your streak grows. Open Stats to see how you are doing.', where: 'Flame in the sidebar → Stats' },
 ]
 
 export function Tutorial({ onClose }: { onClose: () => void }) {
@@ -191,7 +191,7 @@ export function Stats({ go }: { go: (v: View) => void }) {
         <Stat n={doneAll.length} label="tasks done in total" />
         <Stat n={weekMs ? fmtDur(weekMs) : '0m'} label="focus time, last 7 days" />
         <Stat n={totalMs ? fmtDur(totalMs) : '0m'} label="focus time in total" />
-        <Stat n={s.logs.length} label="logs written" />
+        <Stat n={s.logs.filter((l) => !l.note).length} label="logs written" />
         <Stat n={timed.length ? fmtDur(timed.reduce((a, t) => a + t.timeMs, 0) / timed.length) : '–'} label="average time per task" />
       </div>
 

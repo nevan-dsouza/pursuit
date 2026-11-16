@@ -22,6 +22,8 @@ export interface Log {
   date: string
   text: string
   taskId: string | null
+  /** longer notes saved with a task; shown with the day, but not counted as a log */
+  note?: boolean
   by?: string // who wrote it (spaces only)
   createdAt: number
 }

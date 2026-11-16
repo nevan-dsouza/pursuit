@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useStore, uid, type Ws } from './store'
 import { SpacePicker } from './SpaceUI'
 import { SPACES } from './config'
@@ -128,6 +128,7 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
   const [day, setDay] = useState(clamp(t))
   const [msText, setMsText] = useState('')
   const [logText, setLogText] = useState('')
+  const taskInput = useRef<HTMLInputElement>(null)
   const [taskText, setTaskText] = useState('')
   const [taskMs, setTaskMs] = useState('')
   const [drag, setDrag] = useState<string | null>(null)
@@ -232,7 +233,8 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
               <div className="side-label">Logs</div>
               {dayLogs.map((l) => (
                 <div key={l.id} className="line-item log-item">
-                  <span>
+                  <span className={l.note ? 'pre' : ''}>
+                    {l.note && <span className="note-tag">note</span>}
                     {l.by && <span className="log-by">{l.by} · </span>}
                     {l.taskId && <span className="log-src">{taskTitle(l.taskId) ?? 'Task'} · </span>}
                     {l.text}
@@ -257,15 +259,27 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
           <h3>Tasks</h3>
           <p className="muted small">Small, actionable steps. The top of the queue shows on Home. Drag to reorder.</p>
           <div className="add-task">
-            <input placeholder="Add a task…" value={taskText} onChange={(e) => setTaskText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} />
-            <select value={taskMs} onChange={(e) => setTaskMs(e.target.value)} title="Link to a milestone (optional)">
-              <option value="">No milestone</option>
-              {milestones.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.title}
-                </option>
-              ))}
-            </select>
+            {milestones.length > 0 && (
+              <select
+                value={taskMs}
+                onChange={(e) => {
+                  setTaskMs(e.target.value)
+                  taskInput.current?.focus()
+                }}
+                title="Link to a milestone (optional)"
+              >
+                <option value="">No milestone</option>
+                {milestones.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.title}
+                  </option>
+                ))}
+              </select>
+            )}
+            <input ref={taskInput} placeholder="Add a task…" value={taskText} onChange={(e) => setTaskText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} />
+            <button className="primary add-btn" disabled={!taskText.trim()} onClick={() => (addTask(), taskInput.current?.focus())}>
+              Add
+            </button>
           </div>
           <div className="queue">
             {q.map((x, i) => {

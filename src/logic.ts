@@ -108,14 +108,11 @@ export function finishWork(s0: State, taskId: string, outcome: Outcome, by?: str
   if (!t) return { state: s, created: 0, logged: false }
 
   const notes = t.notesDraft.trim()
-  if (notes) s = { ...s, logs: [...s.logs, { id: uid(), goalId: t.goalId, date: today(), text: notes, taskId: t.id, createdAt: Date.now(), ...(by ? { by } : {}) }] }
+  if (notes) s = { ...s, logs: [...s.logs, { id: uid(), goalId: t.goalId, date: today(), text: notes, taskId: t.id, note: true, createdAt: Date.now(), ...(by ? { by } : {}) }] }
 
-  const ids = queue(s, t.goalId).map((x) => x.id)
-  const created = poaLines(t.poaDraft).map((title) => newTask(t.goalId, title, { parentId: t.id, milestoneId: t.milestoneId }))
-  const at = ids.indexOf(t.id)
-  let order = [...ids.slice(0, at + 1), ...created.map((c) => c.id), ...ids.slice(at + 1)]
-  s = { ...s, tasks: [...s.tasks, ...created] }
-  s = updateTask(s, t.id, { notesDraft: '', poaDraft: '' })
+  let order = queue(s, t.goalId).map((x) => x.id)
+  // the plan stays with the task until it is done; steps become tasks only when you choose
+  s = updateTask(s, t.id, outcome === 'done' ? { notesDraft: '', poaDraft: '' } : { notesDraft: '' })
 
   if (outcome === 'progress') s = updateTask(s, t.id, { inProgress: true })
   if (outcome === 'skip') s = patchToday(s, (td) => ({ ...td, skipped: [...td.skipped, t.id], extra: td.extra.filter((x) => x !== t.id) }))
@@ -125,12 +122,32 @@ export function finishWork(s0: State, taskId: string, outcome: Outcome, by?: str
     s = patchToday(s, (td) => ({ ...td, extra: td.extra.filter((x) => x !== t.id) }))
   }
   s = setQueue(s, order)
-  return { state: s, created: created.length, logged: !!notes }
+  return { state: s, created: 0, logged: !!notes }
+}
+
+/** Turn plan steps into tasks, placed right after their parent in the goal's queue (or at `index` if the parent is gone). */
+export function addPlanTasks(s: State, parent: Task, titles: string[], index = 0): State {
+  const clean = titles.map((x) => x.trim()).filter(Boolean)
+  if (!clean.length) return s
+  const ids = queue(s, parent.goalId).map((x) => x.id)
+  const created = clean.map((title) => newTask(parent.goalId, title, { parentId: parent.id, milestoneId: parent.milestoneId }))
+  const at = ids.indexOf(parent.id)
+  // parent already done: go after any steps it spawned earlier, so the plan keeps its order
+  const lastChild = s.tasks.reduce((m, x) => (x.parentId === parent.id ? Math.max(m, ids.indexOf(x.id)) : m), -1)
+  const pos = at >= 0 ? at + 1 : lastChild >= 0 ? lastChild + 1 : Math.min(index, ids.length)
+  return setQueue({ ...s, tasks: [...s.tasks, ...created] }, [...ids.slice(0, pos), ...created.map((c) => c.id), ...ids.slice(pos)])
+}
+
+/** A quick log: one line about something you just got done, counted on today's box of the goal. */
+export function addLog(s: State, task: Task, text: string, by?: string): State {
+  const t = text.trim()
+  if (!t) return s
+  return { ...s, logs: [...s.logs, { id: uid(), goalId: task.goalId, date: today(), text: t, taskId: task.id, createdAt: Date.now(), ...(by ? { by } : {}) }] }
 }
 
 export function logsByDay(s: State, goalId: string) {
   const m = new Map<string, number>()
-  for (const l of s.logs) if (l.goalId === goalId) m.set(l.date, (m.get(l.date) ?? 0) + 1)
+  for (const l of s.logs) if (l.goalId === goalId && !l.note) m.set(l.date, (m.get(l.date) ?? 0) + 1)
   return m
 }
 
@@ -182,7 +199,7 @@ export function recentDays(s: State, n: number) {
       date,
       done: s.tasks.filter((x) => x.status === 'done' && x.completedAt && keyOf(new Date(x.completedAt)) === date).length,
       ms: (s.sessions ?? []).filter((x) => x.date === date).reduce((a, x) => a + x.ms, 0),
-      logs: s.logs.filter((l) => l.date === date).length,
+      logs: s.logs.filter((l) => l.date === date && !l.note).length,
     }
   })
 }

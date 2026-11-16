@@ -3103,6 +3103,233 @@ main > * {
   }
 }
 
+/* ================= dropdown arrow, add-task row, timer buttons, log, plan steps ================= */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%238a8aa0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.500 4.500 6 8l3.500-3.500'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.add-task {
+  display: flex;
+  gap: 8px;
+}
+.add-task input {
+  flex: 1;
+  min-width: 0;
+}
+.add-btn {
+  flex-shrink: 0;
+  padding: 0 18px;
+}
+
+/* Start turns into Pause + Stop in the same slot */
+.oc-timer {
+  min-width: 120px;
+  display: flex;
+}
+.oc-timer > * {
+  flex: 1;
+  animation: pop-in 0.28s var(--ease);
+}
+.oc-pair {
+  display: flex;
+  gap: 8px;
+}
+.oc.oc-ico {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 0;
+  display: grid;
+  place-items: center;
+}
+.oc svg {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
+}
+.oc-start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+.oc-timer.active .oc {
+  border-color: rgba(250, 204, 21, 0.45);
+}
+.timer-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 0;
+  opacity: 0;
+  margin-top: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  transition:
+    height var(--t) var(--ease),
+    opacity var(--t) ease,
+    margin-top var(--t) var(--ease);
+}
+.timer-line.show {
+  height: 22px;
+  opacity: 1;
+  margin-top: 12px;
+}
+.timer-line.running {
+  color: var(--text);
+}
+.tl-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.timer-line.running .tl-dot {
+  background: var(--yellow);
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* log */
+.log-entry {
+  display: flex;
+  gap: 8px;
+}
+.log-entry input {
+  flex: 1;
+  min-width: 0;
+}
+.log-entry .primary {
+  flex-shrink: 0;
+  padding: 0 14px;
+}
+.log-meter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.log-meter b {
+  color: var(--text);
+}
+.lm-box {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  animation: box-pop 0.55s var(--ease);
+}
+.lm-box.p0 { background: var(--p0); }
+.lm-box.p1 { background: var(--p1); }
+.lm-box.p2 { background: var(--p2); }
+.lm-box.p3 { background: var(--p3); }
+.lm-box.p4 { background: var(--p4); }
+.lm-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 8px;
+  border: 2px solid var(--p4);
+  animation: ring-out 0.7s ease-out forwards;
+}
+.lm-plus {
+  position: absolute;
+  left: 2px;
+  top: -4px;
+  font-weight: 700;
+  color: var(--yellow);
+  animation: float-up 0.9s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes box-pop {
+  0% { transform: scale(0.6); }
+  55% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+@keyframes ring-out {
+  from { transform: scale(1); opacity: 0.9; }
+  to { transform: scale(2.6); opacity: 0; }
+}
+@keyframes float-up {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-26px); opacity: 0; }
+}
+@keyframes log-in {
+  from { opacity: 0; transform: translateY(-10px); background: rgba(139, 92, 246, 0.28); }
+  to { background: transparent; }
+}
+.hist.fresh {
+  border-radius: 8px;
+  animation: log-in 0.8s var(--ease);
+}
+
+/* plan steps */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fade-in var(--t) ease;
+}
+.step-n {
+  width: 18px;
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.step input {
+  flex: 1;
+  min-width: 0;
+}
+.step-add {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition: all var(--t-fast) ease;
+}
+.step-add:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--purple);
+}
+.step-add:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.mini-timer {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .oc-timer {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 /* people who ask their device for less motion get none */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -3119,4 +3346,16 @@ main > * {
 }
 .login-legal a {
   color: var(--muted);
+}
+
+.pre {
+  white-space: pre-wrap;
+}
+.note-tag {
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 6px;
+  margin-right: 6px;
 }
