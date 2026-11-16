@@ -3421,3 +3421,13 @@ select.tag-select {
   background-color: transparent;
   color: var(--muted);
 }
+
+.q-item.clickable {
+  cursor: pointer;
+}
+.q-item.clickable:hover {
+  border-color: #3a3a52;
+}
+.q-item.editing {
+  border-color: var(--purple);
+}

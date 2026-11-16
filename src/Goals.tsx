@@ -294,7 +294,11 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
               return (
                 <div
                   key={x.id}
-                  className={`q-item ${drag === x.id ? 'dragging' : ''}`}
+                  className={`q-item ${drag === x.id ? 'dragging' : ''} ${editId === x.id ? 'editing' : 'clickable'}`}
+                  title={editId === x.id ? undefined : 'Click to edit'}
+                  onClick={(e) => {
+                    if (editId !== x.id && !(e.target as HTMLElement).closest('button, input, select')) startEdit(x)
+                  }}
                   draggable={editId !== x.id}
                   onDragStart={() => setDrag(x.id)}
                   onDragEnd={() => setDrag(null)}
@@ -329,7 +333,7 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                       </button>
                     </span>
                   ) : (
-                    <span className={`q-title ${x.crucial ? 'crucial' : x.important ? 'important' : ''}`} onDoubleClick={() => startEdit(x)} title="Double-click to edit">
+                    <span className={`q-title ${x.crucial ? 'crucial' : x.important ? 'important' : ''}`}>
                       {x.title}
                       {(m || x.timeMs > 0) && (
                         <span className="q-ms">
@@ -339,11 +343,6 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                         </span>
                       )}
                     </span>
-                  )}
-                  {editId !== x.id && (
-                    <button className="icon" title="Edit text and milestone" onClick={() => startEdit(x)}>
-                      ✎
-                    </button>
                   )}
                   {i > 0 && (
                     <button
