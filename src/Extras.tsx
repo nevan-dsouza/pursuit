@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useStore } from './store'
 import type { View } from './types'
-import { daysLeftLabel, fmtDay, fmtDur } from './dates'
-import { recentDays, streaks } from './logic'
+import { daysLeftLabel, fmtDay, fmtDur, today } from './dates'
+import { activeDays, recentDays, streaks } from './logic'
 import { Brand } from './Brand'
 
 /* ---------- Sign-in ---------- */
@@ -95,6 +95,12 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
 
 /* ---------- Stats ---------- */
 
+const BADGES = [3, 7, 14, 30, 60, 100, 365]
+const dayLetter = (key: string) => {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'narrow' })
+}
+
 export function Stats({ go }: { go: (v: View) => void }) {
   const { mine, team, space } = useStore()
   const [which, setWhich] = useState<'mine' | 'team'>('mine')
@@ -109,6 +115,13 @@ export function Stats({ go }: { go: (v: View) => void }) {
   const timed = doneAll.filter((t) => t.timeMs > 0)
   const maxDone = Math.max(1, ...two.map((d) => d.done))
   const maxMs = Math.max(1, ...two.map((d) => d.ms))
+  const active = activeDays(s)
+  const t0 = today()
+  const atRisk = st.current > 0 && !st.activeToday
+  const midnight = new Date()
+  midnight.setHours(24, 0, 0, 0)
+  const left = fmtDur(Math.max(60000, midnight.getTime() - Date.now()))
+  const nextBadge = BADGES.find((n) => n > st.current)
 
   return (
     <div className="page">
@@ -124,30 +137,59 @@ export function Stats({ go }: { go: (v: View) => void }) {
         </div>
       )}
 
-      <div className={`streak-card ${st.current ? 'lit' : ''}`}>
-        <div className="streak-num">
-          <Flame /> {st.current}
+      <div className={`streak-hero ${st.current ? 'lit' : ''} ${atRisk ? 'risk' : ''}`}>
+        <div className="sh-flame">
+          <Flame />
+          <b key={st.current}>{st.current}</b>
         </div>
-        <div>
-          <b>
-            {st.current}-day streak
-          </b>
-          <div className="muted small">
-            {st.current === 0
-              ? 'Do anything today, such as adding a task or finishing one, to start a streak.'
-              : st.activeToday
-                ? 'Today is counted. Come back tomorrow to keep it going.'
-                : 'Do one thing today to keep it alive.'}
+        <div className="sh-title">{st.current === 1 ? '1 day streak' : `${st.current} day streak`}</div>
+        <div className="sh-sub">
+          {st.current === 0
+            ? 'Do one thing today, like adding or finishing a task, and your streak starts.'
+            : st.activeToday
+              ? 'Today is counted. Come back tomorrow to keep it going.'
+              : `Do one thing in the next ${left} or the streak resets.`}
+        </div>
+        <div className="sh-week">
+          {week.map((d) => (
+            <div key={d.date} className={`sh-day ${active.has(d.date) ? 'done' : ''} ${d.date === t0 ? 'today' : ''}`} title={fmtDay(d.date)}>
+              <span className="sh-dot">{active.has(d.date) ? <Flame /> : null}</span>
+              <span>{dayLetter(d.date)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="card badges-card">
+        <div className="bd-head">
+          <h3>Milestones</h3>
+          {nextBadge && (
+            <span className="muted small">
+              {nextBadge - st.current} more day{nextBadge - st.current === 1 ? '' : 's'} to the {nextBadge}-day badge
+            </span>
+          )}
+        </div>
+        <div className="badges">
+          {BADGES.map((n) => (
+            <div key={n} className={`badge ${st.best >= n ? 'got' : ''} ${n === nextBadge ? 'next' : ''}`} title={st.best >= n ? `Earned: ${n}-day streak` : `Reach a ${n}-day streak`}>
+              <b>{n}</b>
+              <span>days</span>
+            </div>
+          ))}
+        </div>
+        {nextBadge && (
+          <div className="gs-bar bd-bar">
+            <i style={{ width: `${Math.min(100, (st.current / nextBadge) * 100)}%` }} />
           </div>
-        </div>
+        )}
       </div>
 
       <div className="stat-grid">
         <Stat n={st.best} label="best streak (days)" />
         <Stat n={st.total} label="active days" />
-        <Stat n={weekDone} label="tasks done this week" />
+        <Stat n={weekDone} label="tasks done, last 7 days" />
         <Stat n={doneAll.length} label="tasks done in total" />
-        <Stat n={weekMs ? fmtDur(weekMs) : '0m'} label="focus time this week" />
+        <Stat n={weekMs ? fmtDur(weekMs) : '0m'} label="focus time, last 7 days" />
         <Stat n={totalMs ? fmtDur(totalMs) : '0m'} label="focus time in total" />
         <Stat n={s.logs.length} label="logs written" />
         <Stat n={timed.length ? fmtDur(timed.reduce((a, t) => a + t.timeMs, 0) / timed.length) : '–'} label="average time per task" />

@@ -2919,6 +2919,190 @@ main > * {
   }
 }
 
+/* ================= Stats: the streak is the star ================= */
+.streak-hero {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  padding: 30px 20px 24px;
+  margin-bottom: 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  animation: rise-in var(--t) var(--ease);
+}
+.streak-hero.lit {
+  border-color: rgba(251, 146, 60, 0.45);
+  background: radial-gradient(120% 90% at 50% 0%, rgba(251, 146, 60, 0.16), transparent 60%), var(--surface);
+}
+.sh-flame {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 6px;
+  display: grid;
+  place-items: center;
+}
+.sh-flame .flame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: #2a2a3c;
+  transition: fill var(--t) ease;
+}
+.streak-hero.lit .sh-flame .flame {
+  fill: #fb923c;
+  filter: drop-shadow(0 6px 26px rgba(251, 146, 60, 0.45));
+  transform-origin: 50% 90%;
+  animation: flicker 2.6s ease-in-out infinite;
+}
+.streak-hero.risk .sh-flame .flame {
+  fill: #7a5a3c;
+  filter: none;
+  animation: none;
+}
+@keyframes flicker {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  35% {
+    transform: scale(1.035, 0.985) rotate(-1.2deg);
+  }
+  70% {
+    transform: scale(0.985, 1.03) rotate(1deg);
+  }
+}
+@keyframes count-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+.sh-flame b {
+  position: relative;
+  margin-top: 34px;
+  font: italic 700 46px/1 'Kanit', Inter, sans-serif;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  animation: count-pop 0.45s var(--ease);
+}
+.streak-hero:not(.lit) .sh-flame b {
+  color: var(--muted);
+  text-shadow: none;
+}
+.sh-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+.sh-sub {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 2px;
+}
+.streak-hero.risk .sh-sub {
+  color: #fdba74;
+}
+.sh-week {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+.sh-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.sh-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+}
+.sh-day.done .sh-dot {
+  background: rgba(251, 146, 60, 0.16);
+  border-color: rgba(251, 146, 60, 0.55);
+}
+.sh-dot .flame {
+  width: 18px;
+  height: 18px;
+  fill: #fb923c;
+}
+.sh-day.today .sh-dot {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--pink-ring);
+}
+.sh-day.today {
+  color: var(--text);
+}
+
+.badges-card {
+  margin-bottom: 14px;
+}
+.bd-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.bd-head h3 {
+  margin: 0;
+}
+.badges {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 12px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.badge {
+  flex: 1 0 62px;
+  padding: 10px 4px 8px;
+  border-radius: 14px;
+  border: 1px dashed var(--border);
+  text-align: center;
+  color: var(--muted);
+  opacity: 0.7;
+  transition: all var(--t) ease;
+}
+.badge b {
+  display: block;
+  font: italic 700 22px/1.1 'Kanit', Inter, sans-serif;
+}
+.badge span {
+  font-size: 11px;
+}
+.badge.next {
+  opacity: 1;
+  border-color: var(--muted);
+}
+.badge.got {
+  opacity: 1;
+  border: 1px solid rgba(250, 204, 21, 0.6);
+  background: rgba(250, 204, 21, 0.1);
+  color: var(--yellow);
+}
+.bd-bar i {
+  background: #fb923c;
+}
+@media (max-width: 760px) {
+  .sh-week {
+    gap: 6px;
+  }
+  .sh-dot {
+    width: 32px;
+    height: 32px;
+  }
+}
+
 /* people who ask their device for less motion get none */
 @media (prefers-reduced-motion: reduce) {
   *,
