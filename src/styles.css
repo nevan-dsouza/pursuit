@@ -2596,6 +2596,329 @@ main > * {
   }
 }
 
+/* ================= Meetings: now/next, a day strip, and one clear agenda ================= */
+.page.meet {
+  max-width: 860px;
+}
+.chip-toggle {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  transition: all var(--t-fast) ease;
+}
+.chip-toggle:hover {
+  color: var(--text);
+}
+.chip-toggle.on {
+  border-color: var(--yellow);
+  color: var(--yellow);
+  background: rgba(250, 204, 21, 0.08);
+}
+.join {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  border-radius: 8px;
+  background: var(--grad);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: filter var(--t-fast) ease, transform var(--t-fast) ease;
+}
+.join:hover {
+  filter: brightness(1.12);
+}
+.join:active {
+  transform: scale(0.97);
+}
+
+.glance {
+  display: grid;
+  grid-template-columns: 1.3fr 1.3fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.gl-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  animation: rise-in var(--t) var(--ease);
+}
+.gl-card.live {
+  border-color: rgba(250, 204, 21, 0.5);
+}
+.gl-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+}
+.gl-card.live .gl-label {
+  color: var(--yellow);
+}
+.gl-title {
+  font-size: 17px;
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gl-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+.gl-bar {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  margin-top: 8px;
+  overflow: hidden;
+}
+.gl-bar i {
+  display: block;
+  height: 100%;
+  background: var(--yellow);
+  border-radius: 2px;
+  transition: width 0.5s var(--ease);
+}
+.gl-card .join {
+  margin-top: 10px;
+}
+
+.day-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.ds-day {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 4px 9px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  transition: all var(--t-fast) ease;
+}
+.ds-day:hover {
+  background: var(--surface);
+}
+.ds-day.past {
+  opacity: 0.55;
+}
+.ds-day.on {
+  background: var(--surface);
+  border-color: var(--border);
+  opacity: 1;
+}
+.ds-wd {
+  font-size: 11.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.ds-n {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.ds-day.is-today .ds-n {
+  color: var(--pink-ring);
+}
+.ds-day.on .ds-wd {
+  color: var(--text);
+}
+.ds-count {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.back-week {
+  display: block;
+  margin: 2px auto 0;
+}
+
+.agenda {
+  margin-top: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 20px 14px;
+  animation: rise-in var(--t) var(--ease);
+}
+.ag-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+.ag-empty {
+  color: var(--muted);
+  padding: 18px 0 14px;
+}
+.ag-allday {
+  display: block;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 13.5px;
+  color: var(--text);
+  text-decoration: none;
+}
+.ag-row,
+.ag-free,
+.ag-now {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ag-row {
+  padding: 9px 8px 9px 0;
+  border-radius: 10px;
+  transition: background-color var(--t-fast) ease, opacity var(--t-fast) ease;
+}
+.ag-row:hover {
+  background: var(--surface-2);
+}
+.ag-time {
+  width: 78px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+.ag-time small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.ag-bar {
+  width: 3px;
+  align-self: stretch;
+  min-height: 30px;
+  border-radius: 2px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.ag-row.meeting .ag-bar {
+  background: var(--purple);
+}
+.ag-row.live .ag-bar {
+  background: var(--yellow);
+}
+.ag-title {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.ag-row.block .ag-title {
+  color: #b9b9c9;
+}
+.ag-row.meeting .ag-title {
+  font-weight: 600;
+}
+.ag-title em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--yellow);
+  border: 1px solid rgba(250, 204, 21, 0.5);
+  vertical-align: 2px;
+}
+.ag-row.ended {
+  opacity: 0.42;
+}
+.ag-free {
+  padding: 3px 0;
+  font-size: 12.5px;
+  color: var(--green);
+}
+.ag-free.ended {
+  opacity: 0.4;
+}
+.ag-free-text {
+  margin-left: 17px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--green) 45%, transparent);
+}
+.ag-now {
+  gap: 10px;
+  padding: 4px 0;
+  color: var(--pink-ring);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ag-now span {
+  width: 78px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.ag-now i {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--pink-ring);
+  position: relative;
+}
+.ag-now i::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pink-ring);
+}
+@media (max-width: 760px) {
+  .glance {
+    grid-template-columns: 1fr;
+  }
+  .ds-count {
+    display: none;
+  }
+  .day-strip {
+    gap: 0;
+  }
+  .day-strip > .icon {
+    width: 22px;
+  }
+  .agenda {
+    padding: 14px 12px 10px;
+  }
+  .ag-time,
+  .ag-now span {
+    width: 64px;
+  }
+}
+
 /* people who ask their device for less motion get none */
 @media (prefers-reduced-motion: reduce) {
   *,
