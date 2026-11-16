@@ -38,6 +38,9 @@ export function Login() {
       <button className="link" onClick={useAsGuest}>
         Continue without an account
       </button>
+      <p className="muted small login-legal">
+        <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+      </p>
       <p className="muted small">Without an account, everything is saved on this device only. You can sign in later and your data comes with you.</p>
     </div>
   )

@@ -2606,3 +2606,10 @@ main > * {
     transition-delay: 0s !important;
   }
 }
+
+.login-legal {
+  margin-top: 18px;
+}
+.login-legal a {
+  color: var(--muted);
+}
