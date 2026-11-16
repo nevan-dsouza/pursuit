@@ -128,6 +128,13 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
   const [day, setDay] = useState(clamp(t))
   const [msText, setMsText] = useState('')
   const [logText, setLogText] = useState('')
+  const [editId, setEditId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+  const startEdit = (x: { id: string; title: string }) => (setEditId(x.id), setEditText(x.title))
+  const saveEdit = () => {
+    if (editId && editText.trim()) set((st) => updateTask(st, editId, { title: editText.trim() }))
+    setEditId(null)
+  }
   const taskInput = useRef<HTMLInputElement>(null)
   const [taskText, setTaskText] = useState('')
   const [taskMs, setTaskMs] = useState('')
@@ -288,7 +295,7 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                 <div
                   key={x.id}
                   className={`q-item ${drag === x.id ? 'dragging' : ''}`}
-                  draggable
+                  draggable={editId !== x.id}
                   onDragStart={() => setDrag(x.id)}
                   onDragEnd={() => setDrag(null)}
                   onDragOver={(e) => e.preventDefault()}
@@ -296,16 +303,48 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                 >
                   <span className="handle">⋮⋮</span>
                   <span className="rank">{i + 1}</span>
-                  <span className={`q-title ${x.crucial ? 'crucial' : x.important ? 'important' : ''}`}>
-                    {x.title}
-                    {(m || x.timeMs > 0) && (
-                      <span className="q-ms">
-                        {m && <>◆ {m.title}</>}
-                        {m && x.timeMs > 0 && ' · '}
-                        {x.timeMs > 0 && <span className="muted">{fmtDur(x.timeMs)} so far</span>}
-                      </span>
-                    )}
-                  </span>
+                  {editId === x.id ? (
+                    <span className="q-edit">
+                      <input
+                        autoFocus
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit()
+                          if (e.key === 'Escape') setEditId(null)
+                        }}
+                      />
+                      {milestones.length > 0 && (
+                        <select value={x.milestoneId ?? ''} onChange={(e) => set((st) => updateTask(st, x.id, { milestoneId: e.target.value || null }))} title="Milestone">
+                          <option value="">No milestone</option>
+                          {milestones.map((mm) => (
+                            <option key={mm.id} value={mm.id}>
+                              {mm.title}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <button className="primary" onClick={saveEdit}>
+                        Save
+                      </button>
+                    </span>
+                  ) : (
+                    <span className={`q-title ${x.crucial ? 'crucial' : x.important ? 'important' : ''}`} onDoubleClick={() => startEdit(x)} title="Double-click to edit">
+                      {x.title}
+                      {(m || x.timeMs > 0) && (
+                        <span className="q-ms">
+                          {m && <>◆ {m.title}</>}
+                          {m && x.timeMs > 0 && ' · '}
+                          {x.timeMs > 0 && <span className="muted">{fmtDur(x.timeMs)} so far</span>}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                  {editId !== x.id && (
+                    <button className="icon" title="Edit text and milestone" onClick={() => startEdit(x)}>
+                      ✎
+                    </button>
+                  )}
                   {i > 0 && (
                     <button
                       className="icon touch-only"

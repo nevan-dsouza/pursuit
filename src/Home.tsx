@@ -140,6 +140,7 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
   const [panel, setPanel] = useState<null | 'log' | 'notes' | 'poa'>(null)
   const [logText, setLogText] = useState('')
   const [burst, setBurst] = useState(0)
+  const [editing, setEditing] = useState<string | null>(null)
   const t0 = today()
   const lists: Record<Kind, Task[]> = { mine: todayList(mine.s), team: team ? todayList(team.s) : [] }
   const wsOf = (k: Kind): Ws | null => (k === 'team' ? team : mine)
@@ -239,6 +240,12 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
   const goalLogsToday = task && s ? s.logs.filter((l) => l.goalId === task.goalId && l.date === t0 && !l.note).length : 0
   const planCount = task ? poaLines(task.poaDraft).length : 0
   const level = (n: number) => (n <= 0 ? 0 : n === 1 ? 1 : n === 2 ? 2 : n <= 4 ? 3 : 4)
+  useEffect(() => setEditing(null), [task?.id])
+  const goalMs = task && s ? s.milestones.filter((m) => m.goalId === task.goalId) : []
+  const saveTitle = () => {
+    if (task && ws && editing !== null && editing.trim() && editing.trim() !== task.title) ws.set((st) => updateTask(st, task.id, { title: editing.trim() }))
+    setEditing(null)
+  }
   const due = task && s ? taskDue(s, task) : ''
   const spentNow = task && s ? task.timeMs + (timer ? timerElapsed(s, now) : 0) : 0
 
@@ -252,7 +259,25 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
               {goal?.title}
               {milestone && <> › {milestone.title}</>}
             </div>
-            <h1 className={`task-title ${tone(task)}`}>{task.title}</h1>
+            {editing !== null ? (
+              <div className="title-edit">
+                <input
+                  className={`task-title-input ${tone(task)}`}
+                  autoFocus
+                  value={editing}
+                  onChange={(e) => setEditing(e.target.value)}
+                  onBlur={saveTitle}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveTitle()
+                    if (e.key === 'Escape') setEditing(null)
+                  }}
+                />
+              </div>
+            ) : (
+              <h1 className={`task-title editable ${tone(task)}`} onClick={() => setEditing(task.title)} title="Click to edit">
+                {task.title}
+              </h1>
+            )}
             <div className="task-tags">
               <button className={`tag ${task.crucial ? 'tag-crucial' : ''}`} onClick={() => ws!.set((st) => updateTask(st, task.id, { crucial: !task.crucial }))} title="Crucial">
                 ! crucial
@@ -264,6 +289,16 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
                 due {fmtDay(due)} · {daysLeftLabel(due)}
               </span>
               {spentNow > 0 && <span className="tag static">{fmtDur(spentNow)} spent</span>}
+              {goalMs.length > 0 && (
+                <select className="tag tag-select" value={task.milestoneId ?? ''} onChange={(e) => ws!.set((st) => updateTask(st, task.id, { milestoneId: e.target.value || null }))} title="Milestone for this task">
+                  <option value="">No milestone</option>
+                  {goalMs.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      ◆ {m.title}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="outcomes">
               <div className={`oc-timer ${timer ? 'active' : ''}`}>

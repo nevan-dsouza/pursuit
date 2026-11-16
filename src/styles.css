@@ -3359,3 +3359,65 @@ select {
   padding: 0 6px;
   margin-right: 6px;
 }
+
+/* editing a task */
+.q-edit {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.q-edit input {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 6px 10px;
+}
+.q-edit select {
+  flex: 0 1 160px;
+  width: auto;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.q-edit .primary {
+  padding: 0 14px;
+}
+.task-title.editable {
+  cursor: text;
+  border-radius: 12px;
+  transition: background-color var(--t-fast) ease;
+}
+.task-title.editable:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.title-edit {
+  width: 100%;
+}
+.task-title-input {
+  width: 100%;
+  text-align: center;
+  background: transparent;
+  border: 1px solid var(--purple);
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  padding: 4px 10px;
+  margin: 14px 0;
+}
+.task-title-input.crucial {
+  color: var(--red);
+}
+.task-title-input.important {
+  color: var(--pink);
+}
+select.tag-select {
+  width: auto;
+  max-width: 200px;
+  padding-right: 26px;
+  background-position: right 9px center;
+  background-color: transparent;
+  color: var(--muted);
+}
