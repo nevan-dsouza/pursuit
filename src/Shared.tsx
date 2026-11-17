@@ -84,10 +84,10 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
         <div className="card">
           <h3>Connect GitHub</h3>
           <p className="muted small">
-            Paste a GitHub token that can read and write the contents of {OT.owner}/{OT.repo}. It is kept in this browser only and is not synced to your account.
+            Paste a GitHub personal access token (classic) with the <b>repo</b> scope. Create one at github.com → Settings → Developer settings → Personal access tokens → Tokens (classic). You also need to be a collaborator on {OT.owner}/{OT.repo}. The token is kept in this browser only and is not synced to your account.
           </p>
           <div className="log-entry">
-            <input type="password" autoComplete="off" placeholder="github_pat_…" value={draft} onChange={(e) => setDraft(e.target.value)} />
+            <input type="password" autoComplete="off" placeholder="ghp_…" value={draft} onChange={(e) => setDraft(e.target.value)} />
             <button className="primary" disabled={!draft.trim()} onClick={() => (setToken(draft.trim()), setTok(draft.trim()), setDraft(''))}>
               Save
             </button>

@@ -128,7 +128,7 @@ async function gh(path: string, init: RequestInit = {}, raw = false) {
     headers: { Authorization: `Bearer ${token}`, Accept: raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(init.headers ?? {}) },
   })
   if (r.status === 401) throw new Error('GitHub did not accept the token. Check it has not expired.')
-  if (r.status === 403 || r.status === 404) throw new Error(`GitHub refused (${r.status}). The token needs Contents read and write access to ${OT.owner}/${OT.repo}.`)
+  if (r.status === 403 || r.status === 404) throw new Error(`GitHub refused (${r.status}). Use a classic token with the repo scope, and check you are a collaborator on ${OT.owner}/${OT.repo}.`)
   if (!r.ok) throw new Error(`GitHub returned ${r.status}`)
   return raw ? r.text() : r.json()
 }
