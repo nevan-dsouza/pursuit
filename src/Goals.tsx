@@ -124,7 +124,9 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
   const { toast } = useStore()
   const { s, set, by } = ws
   const t = today()
-  const clamp = (d: string) => (d < goal.startDate ? goal.startDate : d > goal.deadline ? goal.deadline : d)
+  // logs can be older than the goal's start (e.g. brought in from a shared goal): the grid reaches back to show them
+  const from = s.logs.reduce((m, l) => (l.goalId === goal.id && l.date < m ? l.date : m), goal.startDate)
+  const clamp = (d: string) => (d < from ? from : d > goal.deadline ? goal.deadline : d)
   const [day, setDay] = useState(clamp(t))
   const [msText, setMsText] = useState('')
   const [logText, setLogText] = useState('')
@@ -214,7 +216,7 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
       </header>
 
       <div className="card">
-        <Grid start={goal.startDate} deadline={goal.deadline} counts={logsByDay(s, goal.id)} milestones={msByDay} selected={day} onSelect={setDay} />
+        <Grid start={from} deadline={goal.deadline} counts={logsByDay(s, goal.id)} milestones={msByDay} selected={day} onSelect={setDay} />
 
         <div className="day-panel">
           <div className="day-title">
