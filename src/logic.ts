@@ -164,7 +164,7 @@ export function activeDays(s: State) {
   for (const g of s.goals) stamp(g.createdAt)
   for (const m of s.milestones) stamp(m.createdAt)
   for (const t of s.tasks) stamp(t.createdAt)
-  for (const l of s.logs) d.add(l.date)
+  for (const l of s.logs) if (!l.ext) d.add(l.date)
   for (const x of s.sessions ?? []) d.add(x.date)
   for (const t of s.tasks) if (t.status === 'done' && t.completedAt) d.add(keyOf(new Date(t.completedAt)))
   return d
@@ -199,7 +199,7 @@ export function recentDays(s: State, n: number) {
       date,
       done: s.tasks.filter((x) => x.status === 'done' && x.completedAt && keyOf(new Date(x.completedAt)) === date).length,
       ms: (s.sessions ?? []).filter((x) => x.date === date).reduce((a, x) => a + x.ms, 0),
-      logs: s.logs.filter((l) => l.date === date && !l.note).length,
+      logs: s.logs.filter((l) => l.date === date && !l.note && !l.ext).length,
     }
   })
 }

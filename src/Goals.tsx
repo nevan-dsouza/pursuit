@@ -246,9 +246,11 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                     {l.taskId && <span className="log-src">{taskTitle(l.taskId) ?? 'Task'} · </span>}
                     {l.text}
                   </span>
-                  <button className="icon" title="Delete log" onClick={() => set((st) => ({ ...st, logs: st.logs.filter((x) => x.id !== l.id) }))}>
-                    ×
-                  </button>
+                  {!l.ext && (
+                    <button className="icon" title="Delete log" onClick={() => set((st) => ({ ...st, logs: st.logs.filter((x) => x.id !== l.id) }))}>
+                      ×
+                    </button>
+                  )}
                 </div>
               ))}
               {day <= t ? (

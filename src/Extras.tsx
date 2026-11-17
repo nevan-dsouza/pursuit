@@ -191,7 +191,7 @@ export function Stats({ go }: { go: (v: View) => void }) {
         <Stat n={doneAll.length} label="tasks done in total" />
         <Stat n={weekMs ? fmtDur(weekMs) : '0m'} label="focus time, last 7 days" />
         <Stat n={totalMs ? fmtDur(totalMs) : '0m'} label="focus time in total" />
-        <Stat n={s.logs.filter((l) => !l.note).length} label="logs written" />
+        <Stat n={s.logs.filter((l) => !l.note && !l.ext).length} label="logs written" />
         <Stat n={timed.length ? fmtDur(timed.reduce((a, t) => a + t.timeMs, 0) / timed.length) : '–'} label="average time per task" />
       </div>
 

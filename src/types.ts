@@ -4,6 +4,11 @@ export interface Goal {
   startDate: string // YYYY-MM-DD
   deadline: string // YYYY-MM-DD
   createdAt: number
+  /** shared with a onetask partner: the item's id on the shared branch, and the newest save seen */
+  shareId?: string
+  shareSeen?: string
+  taskPlanId?: string
+  taskPlanSeen?: string
 }
 
 export interface Milestone {
@@ -24,7 +29,13 @@ export interface Log {
   taskId: string | null
   /** longer notes saved with a task; shown with the day, but not counted as a log */
   note?: boolean
-  by?: string // who wrote it (spaces only)
+  by?: string // who wrote it (spaces, or a sharing partner)
+  /** a partner's entry from the shared branch: read-only, refreshed on every pull */
+  ext?: boolean
+  /** shared goals: the entry's time on the shared branch, plus onetask's hours and progress */
+  otAt?: string
+  hours?: number
+  progress?: number
   createdAt: number
 }
 
@@ -91,4 +102,4 @@ export interface State {
   settings: Settings
 }
 
-export type View = 'home' | 'goals' | 'meetings' | 'spaces' | 'stats' | 'settings'
+export type View = 'shared' | 'home' | 'goals' | 'meetings' | 'spaces' | 'stats' | 'settings'

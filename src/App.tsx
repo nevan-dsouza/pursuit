@@ -10,8 +10,10 @@ import { Settings } from './Settings'
 import { Brand } from './Brand'
 import { Spaces } from './SpaceUI'
 import { SPACES } from './config'
+import { Shared } from './Shared'
 import { Flame, Login, Stats, Tutorial } from './Extras'
 
+const OWNER_HASH = 'e719f5715aff4be7e26ed390aceb0fd03d323850e143474c0b8ef2633afe4cc7'
 const RAIL = 'pursuit:side-collapsed'
 const Icon = ({ children }: { children: ReactNode }) => (
   <svg className="sb-ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -33,6 +35,13 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M3 8.500h14M7 3v3M13 3v3" />
     </>
   ),
+  shared: (
+    <>
+      <circle cx="7" cy="7.500" r="2.600" />
+      <circle cx="14" cy="8.500" r="2.100" />
+      <path d="M2.500 16c.4-2.600 2.200-4 4.500-4s4.100 1.400 4.500 4M12.500 12.200c2.600-.4 4.600.9 5 3.300" />
+    </>
+  ),
   stats: <path d="M4 16.500V11M8.500 16.500v-9M13 16.500v-6M17 16.500V4" />,
   settings: (
     <>
@@ -48,7 +57,7 @@ const ICONS: Record<string, ReactNode> = {
   ),
 }
 
-const VIEWS: View[] = ['home', 'goals', 'meetings', 'spaces', 'stats', 'settings']
+const VIEWS: View[] = ['shared', 'home', 'goals', 'meetings', 'spaces', 'stats', 'settings']
 const fromHash = (): View => {
   const h = location.hash.slice(1) as View
   return VIEWS.includes(h) ? h : 'home'
@@ -60,6 +69,20 @@ export default function App() {
   const [now, setNow] = useState(Date.now())
   const [tutorial, setTutorial] = useState(false)
   const [focus, setFocus] = useState<Focus>(null)
+  // the Shared page exists for one account only; the address is kept as a hash, not in the code
+  const [owner, setOwner] = useState(false)
+  useEffect(() => {
+    let live = true
+    const email = auth.status === 'in' ? (auth.email ?? '').trim().toLowerCase() : ''
+    if (!email || !crypto?.subtle) return setOwner(false)
+    crypto.subtle.digest('SHA-256', new TextEncoder().encode(email)).then((buf) => {
+      const hex = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
+      if (live) setOwner(hex === OWNER_HASH)
+    })
+    return () => {
+      live = false
+    }
+  }, [auth.status, auth.email])
   const [goalSel, setGoalSel] = useState<GoalSel>(null)
   const [goalNew, setGoalNew] = useState<'mine' | 'team' | null>(null)
   const goalNav: GoalNav = { sel: goalSel, setSel: setGoalSel, creating: goalNew, setCreating: setGoalNew }
@@ -125,6 +148,7 @@ export default function App() {
     ['goals', 'Goals'],
     ['meetings', 'Meetings'],
     ...(SPACES ? ([['spaces', 'Spaces']] as [View, string][]) : []),
+    ...(owner ? ([['shared', 'Shared']] as [View, string][]) : []),
   ]
 
   // clicking a task anywhere opens it on Home; a timer running on another task is saved first
@@ -238,6 +262,7 @@ export default function App() {
         {view === 'goals' && <Goals nav={goalNav} />}
         {view === 'meetings' && <Meetings />}
         {view === 'spaces' && (SPACES ? <Spaces /> : home)}
+        {view === 'shared' && (owner ? <Shared openGoal={(id) => (setGoalSel({ k: 'mine', id }), setGoalNew(null), go('goals'))} /> : home)}
         {view === 'stats' && <Stats go={go} />}
         {view === 'settings' && <Settings showTutorial={() => setTutorial(true)} />}
       </main>

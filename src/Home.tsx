@@ -237,7 +237,7 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
   const parent = task?.parentId && s ? s.tasks.find((t) => t.id === task.parentId) : undefined
   const history = task && s ? s.logs.filter((l) => l.taskId === task.id || (parent && l.taskId === parent.id)).sort((a, b) => b.createdAt - a.createdAt) : []
   const todayLogs = task ? history.filter((l) => l.taskId === task.id && l.date === t0 && !l.note) : []
-  const goalLogsToday = task && s ? s.logs.filter((l) => l.goalId === task.goalId && l.date === t0 && !l.note).length : 0
+  const goalLogsToday = task && s ? s.logs.filter((l) => l.goalId === task.goalId && l.date === t0 && !l.note && !l.ext).length : 0
   const planCount = task ? poaLines(task.poaDraft).length : 0
   const level = (n: number) => (n <= 0 ? 0 : n === 1 ? 1 : n === 2 ? 2 : n <= 4 ? 3 : 4)
   useEffect(() => setEditing(null), [task?.id])
