@@ -3470,3 +3470,8 @@ select.tag-select {
 .sh-foot {
   margin: 10px 0 0;
 }
+
+.sh-old {
+  display: block;
+  margin: 10px 0 2px;
+}

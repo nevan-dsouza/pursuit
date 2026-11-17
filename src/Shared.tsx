@@ -12,6 +12,7 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
   const [busy, setBusy] = useState<'' | 'pull' | 'push'>('')
   const [error, setError] = useState('')
   const [open, setOpen] = useState<string | null>(null)
+  const [showOld, setShowOld] = useState(false)
 
   const pull = async (quiet = false) => {
     setBusy('pull')
@@ -58,6 +59,38 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
   const mineShared = s.goals.filter((g) => g.shareId)
   const notShared = s.goals.filter((g) => !g.shareId)
 
+  const live = goals.filter((g) => g.sharedBy.length > 0 || linked(g.id))
+  const old = goals.filter((g) => !g.sharedBy.length && !linked(g.id))
+  const goalRow = (it: Item<GoalDoc>) => {
+              const g = linked(it.id)
+              const entries = it.files.reduce((n, f) => n + (f.doc.kind === 'goal' ? f.doc.entries.length : 0), 0)
+              return (
+                <div key={it.id} className="sh-row">
+                  <div className="sh-main">
+                    <b>{it.newest.title}</b>
+                    <span className="muted small">
+                      Goal · {describe(it.newest)} · {entries} log{entries === 1 ? '' : 's'} · {it.sharedBy.length ? `shared by ${it.sharedBy.join(', ')}` : 'older goal, no partner shares it now'} · last saved by {it.newest.saved_by}
+                    </span>
+                  </div>
+                  {g ? (
+                    <button className="link small" onClick={() => openGoal(g.id)}>
+                      In your goals →
+                    </button>
+                  ) : (
+                    <button
+                      className="secondary"
+                      onClick={() => {
+                        set((st) => importGoal(st, it))
+                        toast(`Added “${it.newest.title}” to your goals`)
+                      }}
+                    >
+                      Add to my goals
+                    </button>
+                  )}
+                </div>
+              )
+            }
+
   return (
     <div className="page shared">
       <header className="page-head">
@@ -98,36 +131,8 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
           <div className="card">
             <h3>On the shared branch</h3>
             {!remote && <p className="muted small">{busy ? 'Reading…' : 'Press Pull to read the branch.'}</p>}
-            {remote && !goals.length && !plans.length && <p className="muted small">Nothing shared yet.</p>}
-            {goals.map((it) => {
-              const g = linked(it.id)
-              const entries = it.files.reduce((n, f) => n + (f.doc.kind === 'goal' ? f.doc.entries.length : 0), 0)
-              return (
-                <div key={it.id} className="sh-row">
-                  <div className="sh-main">
-                    <b>{it.newest.title}</b>
-                    <span className="muted small">
-                      Goal · {describe(it.newest)} · {entries} log{entries === 1 ? '' : 's'} · {it.sharedBy.length ? `shared by ${it.sharedBy.join(', ')}` : 'no partner shares this now'} · last saved by {it.newest.saved_by}
-                    </span>
-                  </div>
-                  {g ? (
-                    <button className="link small" onClick={() => openGoal(g.id)}>
-                      In your goals →
-                    </button>
-                  ) : (
-                    <button
-                      className="secondary"
-                      onClick={() => {
-                        set((st) => importGoal(st, it))
-                        toast(`Added “${it.newest.title}” to your goals`)
-                      }}
-                    >
-                      Add to my goals
-                    </button>
-                  )}
-                </div>
-              )
-            })}
+            {remote && !live.length && !old.length && !plans.length && <p className="muted small">Nothing shared yet.</p>}
+            {live.map(goalRow)}
             {plans.map((it) => (
               <div key={it.id} className="sh-row col">
                 <button className="sh-main as-btn" onClick={() => setOpen(open === it.id ? null : it.id)}>
@@ -139,6 +144,14 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
                 {open === it.id && <p className="pre sh-body">{it.newest.body}</p>}
               </div>
             ))}
+            {old.length > 0 && (
+              <>
+                <button className="link small sh-old" onClick={() => setShowOld(!showOld)}>
+                  {showOld ? 'Hide' : 'Show'} {old.length} older goal{old.length === 1 ? '' : 's'} your partner no longer shares
+                </button>
+                {showOld && old.map(goalRow)}
+              </>
+            )}
             {remote && (
               <p className="muted small sh-foot">
                 Read {new Date(remote.at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
