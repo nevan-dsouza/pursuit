@@ -7,8 +7,11 @@ export interface Goal {
   /** shared with a onetask partner: the item's id on the shared branch, and the newest save seen */
   shareId?: string
   shareSeen?: string
-  taskPlanId?: string
-  taskPlanSeen?: string
+  /** the shared plan that belongs to this goal: its tasks travel as a checklist at the top, the rest is free text */
+  planId?: string
+  planSeen?: string
+  planTitle?: string
+  planText?: string
 }
 
 export interface Milestone {

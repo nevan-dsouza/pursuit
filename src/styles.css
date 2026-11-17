@@ -3475,3 +3475,31 @@ select.tag-select {
   display: block;
   margin: 10px 0 2px;
 }
+
+.sh-row {
+  flex-wrap: wrap;
+}
+.sh-line {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.sh-sub {
+  flex-basis: 100%;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  margin-top: -4px;
+}
+select.sh-attach {
+  width: auto;
+  max-width: 220px;
+  flex-shrink: 0;
+}
+.plan-card {
+  margin-bottom: 14px;
+}
+.plan-card textarea {
+  margin-top: 12px;
+  line-height: 1.55;
+}

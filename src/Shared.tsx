@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore } from './store'
 import { fmtDay } from './dates'
-import { OT, applyRemote, buildMine, describe, getToken, importGoal, items, readRemote, setToken, shareGoal, writeMine, type GoalDoc, type Item, type PlanDoc, type Remote } from './onetask'
+import { OT, applyRemote, attachPlan, buildMine, describe, detachPlan, getToken, importGoal, items, likelyPlan, readRemote, setToken, shareGoal, splitBody, writeMine, type GoalDoc, type Item, type PlanDoc, type Remote } from './onetask'
 
 /* Shared goals with a partner on onetask. Shown to one account only (see App). */
 export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
@@ -53,8 +53,9 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
 
   const all = remote ? items(remote) : []
   const goals = all.filter((x) => x.kind === 'goal') as Item<GoalDoc>[]
-  const taskPlans = new Set(s.goals.map((g) => g.taskPlanId).filter(Boolean))
-  const plans = (all.filter((x) => x.kind === 'plan') as Item<PlanDoc>[]).filter((p) => !taskPlans.has(p.id))
+  const allPlans = all.filter((x) => x.kind === 'plan') as Item<PlanDoc>[]
+  const attached = new Set(s.goals.map((g) => g.planId).filter(Boolean))
+  const plans = allPlans.filter((p) => !attached.has(p.id)) // plans that are not yet any goal's plan
   const linked = (id: string) => s.goals.find((g) => g.shareId === id)
   const mineShared = s.goals.filter((g) => g.shareId)
   const notShared = s.goals.filter((g) => !g.shareId)
@@ -74,14 +75,19 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
                   </div>
                   {g ? (
                     <button className="link small" onClick={() => openGoal(g.id)}>
-                      In your goals →
+                      Open goal →
                     </button>
                   ) : (
                     <button
                       className="secondary"
                       onClick={() => {
-                        set((st) => importGoal(st, it))
-                        toast(`Added “${it.newest.title}” to your goals`)
+                        const plan = likelyPlan(it.newest.title, plans)
+                        set((st) => {
+                          const next = importGoal(st, it)
+                          const g = next.goals.find((x) => x.shareId === it.id)
+                          return plan && g && !g.planId ? attachPlan(next, g.id, plan) : next
+                        })
+                        toast(plan ? `Added “${it.newest.title}” with its plan “${plan.newest.title}”` : `Added “${it.newest.title}” to your goals`)
                       }}
                     >
                       Add to my goals
@@ -133,17 +139,42 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
             {!remote && <p className="muted small">{busy ? 'Reading…' : 'Press Pull to read the branch.'}</p>}
             {remote && !live.length && !old.length && !plans.length && <p className="muted small">Nothing shared yet.</p>}
             {live.map(goalRow)}
-            {plans.map((it) => (
-              <div key={it.id} className="sh-row col">
-                <button className="sh-main as-btn" onClick={() => setOpen(open === it.id ? null : it.id)}>
-                  <b>{it.newest.title}</b>
-                  <span className="muted small">
-                    Plan · {describe(it.newest)} · last saved by {it.newest.saved_by} · {open === it.id ? 'hide' : 'read'}
-                  </span>
-                </button>
-                {open === it.id && <p className="pre sh-body">{it.newest.body}</p>}
-              </div>
-            ))}
+            {plans.map((it) => {
+              const parts = splitBody(it.newest.body)
+              const targets = s.goals.filter((g) => g.shareId && !g.planId)
+              return (
+                <div key={it.id} className="sh-row col">
+                  <div className="sh-line">
+                    <button className="sh-main as-btn" onClick={() => setOpen(open === it.id ? null : it.id)}>
+                      <b>{it.newest.title}</b>
+                      <span className="muted small">
+                        Plan, not attached to a goal · {parts.tasks.length} task line{parts.tasks.length === 1 ? '' : 's'} · last saved by {it.newest.saved_by} · {open === it.id ? 'hide' : 'read'}
+                      </span>
+                    </button>
+                    {targets.length > 0 && (
+                      <select
+                        className="sh-attach"
+                        value=""
+                        onChange={(e) => {
+                          const gid = e.target.value
+                          if (!gid) return
+                          set((st) => attachPlan(st, gid, it))
+                          toast(`“${it.newest.title}” is now the plan of that goal`)
+                        }}
+                      >
+                        <option value="">Attach to a goal…</option>
+                        {targets.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.title}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  {open === it.id && <p className="pre sh-body">{it.newest.body}</p>}
+                </div>
+              )
+            })}
             {old.length > 0 && (
               <>
                 <button className="link small sh-old" onClick={() => setShowOld(!showOld)}>
@@ -163,7 +194,7 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
           <div className="card">
             <h3>What you share</h3>
             <p className="muted small">
-              Push writes each shared goal to {OT.me}/ on the branch: its title, dates, milestones, your logs, and its tasks as a checklist plan. Your partner's logs and any tasks they add or tick come back on Pull.
+              Each shared goal carries one plan. Push writes the goal (title, dates, milestones, your logs with focus hours) and its plan (your tasks as a checklist, then the plan text) to {OT.me}/. Pull brings back your partner's logs, their plan text, and any tasks they add or tick.
             </p>
             {mineShared.map((g) => (
               <div key={g.id} className="sh-row">
@@ -176,6 +207,16 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
                 <button className="link small" onClick={() => set((st) => shareGoal(st, g.id, false))} title="Stops syncing this goal from Pursuit. Files already on the branch stay as they are.">
                   Stop sharing
                 </button>
+                <div className="sh-sub">
+                  <span className="muted small">
+                    ↳ Plan: {g.planId ? `“${g.planTitle ?? g.title}”` : 'a new plan is created on Push, once the goal has tasks or plan text'}
+                  </span>
+                  {g.planId && (
+                    <button className="link small" onClick={() => set((st) => detachPlan(st, g.id))} title="The plan stays on the branch; this goal just stops using it">
+                      Detach
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
             {notShared.map((g) => (

@@ -197,6 +197,7 @@ export function items(remote: Remote): Item[] {
 
 /* ---------- pull: bring shared items into Pursuit ---------- */
 
+const FOCUS = 'Focus time'
 const entryText = (e: Entry) => [e.note.trim() || 'Logged time', e.hours ? `${e.hours}h` : '', e.progress ? `progress ${e.progress}` : ''].filter(Boolean).join(' · ')
 
 /** Bring one shared goal into Pursuit, or refresh the one already linked to it. */
@@ -228,7 +229,7 @@ export function importGoal(s: State, item: Item<GoalDoc>): State {
     if (f.doc.kind !== 'goal') continue
     for (const e of f.doc.entries) {
       if (f.who !== OT.me) logs.push({ id: `ot-${f.who}-${e.created_at}`, goalId: gid, date: e.day, text: entryText(e), taskId: null, by: f.who, ext: true, createdAt: ms(e.created_at) })
-      else if (!logs.some((l) => l.goalId === gid && l.otAt === e.created_at))
+      else if (!(e.note === FOCUS && e.created_at.includes('T23:59:59')) && !logs.some((l) => l.goalId === gid && l.otAt === e.created_at))
         logs.push({ id: uid(), goalId: gid, date: e.day, text: e.note.trim() || 'Logged time', taskId: null, otAt: e.created_at, hours: e.hours, progress: e.progress, createdAt: ms(e.created_at) })
     }
   }
@@ -236,9 +237,24 @@ export function importGoal(s: State, item: Item<GoalDoc>): State {
   return { ...s, goals, milestones: [...s.milestones, ...marks], logs }
 }
 
-/* Tasks travel as a checklist inside a shared plan, because onetask shares goals and plans, not tasks. */
+/*
+ * A onetask plan is "the next few doable steps toward one thing, and the context to restart".
+ * In Pursuit the next steps are the goal's tasks, so a goal and its plan are one thing:
+ * the tasks travel as a checklist at the top of the plan's text, and the rest of the text
+ * (context, roadmap, ideas) is kept exactly as written and shown on the goal as its plan.
+ */
 const LINE = /^\s*[-*]\s*\[( |x|X)\]\s+(.+?)\s*$/
-export const taskPlanTitle = (goalTitle: string) => `${goalTitle} · tasks`
+const HEAD = /^\s*tasks\s*:?\s*$/i
+export function splitBody(body: string): { tasks: { title: string; done: boolean }[]; rest: string } {
+  const tasks: { title: string; done: boolean }[] = []
+  const rest: string[] = []
+  for (const line of body.split('\n')) {
+    const m = LINE.exec(line)
+    if (m) tasks.push({ title: m[2], done: m[1] !== ' ' })
+    else if (!HEAD.test(line)) rest.push(line)
+  }
+  return { tasks, rest: rest.join('\n').replace(/^\n+/, '').replace(/\s+$/, '') }
+}
 function checklist(s: State, goalId: string): string {
   const open = queue(s, goalId).map((t) => `- [ ] ${t.title}`)
   const done = s.tasks
@@ -248,17 +264,13 @@ function checklist(s: State, goalId: string): string {
     .map((t) => `- [x] ${t.title}`)
   return [...open, ...done].join('\n')
 }
+const joinBody = (tasks: string, rest: string) => [tasks ? `Tasks:\n${tasks}` : '', rest.trim()].filter(Boolean).join('\n\n')
 
-/** A partner edited the task checklist: new lines become tasks, ticked lines are marked done. */
-export function importTasks(s: State, goalId: string, plan: PlanDoc): State {
-  if (plan.saved_by === OT.me) return s
+/** Lines in the plan's checklist become tasks; ticked lines are marked done. Nothing is ever removed. */
+function importTasks(s: State, goalId: string, plan: PlanDoc): State {
   let out = s
   const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
-  for (const line of plan.body.split('\n')) {
-    const m = LINE.exec(line)
-    if (!m) continue
-    const done = m[1] !== ' '
-    const title = m[2]
+  for (const { title, done } of splitBody(plan.body).tasks) {
     const t = out.tasks.find((x) => x.goalId === goalId && same(x.title, title))
     if (!t) {
       const nt: Task = { ...newTask(goalId, title), ...(done ? { status: 'done' as const, completedAt: ms(plan.saved_at), doneBy: plan.saved_by } : {}) }
@@ -271,17 +283,38 @@ export function importTasks(s: State, goalId: string, plan: PlanDoc): State {
   return out
 }
 
-/** Refresh everything already linked: goals, partners' logs, and tasks a partner added or ticked. */
+/** Make a shared plan the plan of one of my goals: its text shows on the goal, its checklist becomes tasks. */
+export function attachPlan(s: State, goalId: string, item: Item<PlanDoc>): State {
+  const d = item.newest
+  const out = importTasks(s, goalId, d)
+  return { ...out, goals: out.goals.map((g) => (g.id === goalId ? { ...g, planId: item.id, planSeen: d.saved_at, planTitle: d.title, planText: splitBody(d.body).rest } : g)) }
+}
+export const detachPlan = (s: State, goalId: string): State => ({ ...s, goals: s.goals.map((g) => (g.id === goalId ? { ...g, planId: undefined, planSeen: undefined, planTitle: undefined, planText: undefined } : g)) })
+
+/** The plan that most likely belongs to a goal: the one whose title shares most of its words. */
+export function likelyPlan(goalTitle: string, plans: Item<PlanDoc>[]): Item<PlanDoc> | undefined {
+  const words = (t: string) => new Set(t.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2))
+  const g = words(goalTitle)
+  const score = (p: Item<PlanDoc>) => {
+    const w = words(p.newest.title)
+    return [...g].filter((x) => w.has(x)).length / Math.max(1, Math.min(g.size, w.size))
+  }
+  const best = [...plans].sort((a, b) => score(b) - score(a))[0]
+  return best && score(best) >= 0.6 ? best : undefined
+}
+
+/** Refresh everything already linked: goals, partners' logs, the plan's text, and tasks a partner added or ticked. */
 export function applyRemote(s: State, remote: Remote): State {
   let out = s
   const all = items(remote)
   for (const it of all) if (it.kind === 'goal' && out.goals.some((g) => g.shareId === it.id)) out = importGoal(out, it as Item<GoalDoc>)
   for (const g of out.goals) {
-    if (!g.shareId || !g.taskPlanId) continue
-    const plan = all.find((x) => x.kind === 'plan' && x.id === g.taskPlanId)
-    if (plan && (!g.taskPlanSeen || ms(plan.newest.saved_at) > ms(g.taskPlanSeen))) {
-      out = importTasks(out, g.id, plan.newest as PlanDoc)
-      out = { ...out, goals: out.goals.map((x) => (x.id === g.id ? { ...x, taskPlanSeen: plan.newest.saved_at } : x)) }
+    if (!g.shareId || !g.planId) continue
+    const plan = all.find((x) => x.kind === 'plan' && x.id === g.planId) as Item<PlanDoc> | undefined
+    if (plan && (!g.planSeen || ms(plan.newest.saved_at) > ms(g.planSeen))) {
+      // a partner saved the plan after the version I last saw: their text wins, their task lines come in
+      out = importTasks(out, g.id, plan.newest)
+      out = { ...out, goals: out.goals.map((x) => (x.id === g.id ? { ...x, planSeen: plan.newest.saved_at, planTitle: plan.newest.title, planText: splitBody(plan.newest.body).rest } : x)) }
     }
   }
   return out
@@ -312,23 +345,32 @@ export function buildMine(s: State, remote: Remote): { docs: Doc[]; state: State
     const writers = [...new Set([...(item?.files.flatMap((f) => f.doc.writers) ?? []), ...(changed || item?.mine ? [OT.me] : []), OT.me])].sort()
 
     // my own logs go out as my entries; partners' logs and long notes stay out
-    const mine = logs.filter((l) => l.goalId === g0.id && !l.ext && !l.note)
-    const entries: Entry[] = mine
-      .sort((a, b) => a.createdAt - b.createdAt)
-      .map((l) => {
-        const at = l.otAt ?? iso(l.createdAt)
-        if (!l.otAt) logs = logs.map((x) => (x.id === l.id ? { ...x, otAt: at } : x))
-        return { day: l.date, hours: l.hours ?? 0, progress: l.progress ?? 0, note: l.text, created_at: at }
-      })
+    // the day's timed focus goes out as hours on that day's first log (or on its own line if there is none)
+    const mine = logs.filter((l) => l.goalId === g0.id && !l.ext && !l.note).sort((a, b) => a.createdAt - b.createdAt)
+    const focus = new Map<string, number>()
+    for (const x of s.sessions ?? []) if (x.goalId === g0.id) focus.set(x.date, (focus.get(x.date) ?? 0) + x.ms)
+    const hoursOf = (day: string) => Math.round(((focus.get(day) ?? 0) / 3600000) * 100) / 100
+    const used = new Set<string>()
+    const entries: Entry[] = mine.map((l) => {
+      const at = l.otAt ?? iso(l.createdAt)
+      if (!l.otAt) logs = logs.map((x) => (x.id === l.id ? { ...x, otAt: at } : x))
+      const first = l.hours === undefined && !used.has(l.date)
+      if (first) used.add(l.date)
+      return { day: l.date, hours: l.hours ?? (first ? hoursOf(l.date) : 0), progress: l.progress ?? 0, note: l.text, created_at: at }
+    })
+    for (const [day] of focus) if (!mine.some((l) => l.date === day) && hoursOf(day) > 0) entries.push({ day, hours: hoursOf(day), progress: 0, note: FOCUS, created_at: `${day}T23:59:59${iso(Date.now()).slice(19)}` })
+    entries.sort((a, b) => ms(a.created_at) - ms(b.created_at))
     docs.push({ version: 1, kind: 'goal', id: g0.shareId, shared: true, title: g0.title, description: seen?.description ?? '', start: g0.startDate, deadline: g0.deadline, marks, entries, saved_at, saved_by: changed ? OT.me : seen!.saved_by, writers })
     patch(g0.id, { shareSeen: saved_at })
 
-    // the goal's tasks, as a checklist in a plan of their own
-    const planId = g0.taskPlanId ?? crypto.randomUUID()
+    // the goal's plan: its tasks as a checklist, then the context text, in one shared plan
+    const tasks = checklist(s, g0.id)
+    const rest = g0.planText ?? ''
+    if (!g0.planId && !tasks && !rest.trim()) continue
+    const planId = g0.planId ?? crypto.randomUUID()
     const pItem = all.find((x) => x.kind === 'plan' && x.id === planId) as Item<PlanDoc> | undefined
-    const body = checklist(s, g0.id)
-    const title = taskPlanTitle(g0.title)
-    if (!pItem && !body) continue
+    const body = joinBody(tasks, rest)
+    const title = (g0.planTitle ?? g0.title).trim() || g0.title
     const pChanged = !pItem || pItem.newest.body.trim() !== body.trim() || pItem.newest.title !== title
     const pAt = pChanged ? stamp(pItem?.newest.saved_at) : pItem!.newest.saved_at
     docs.push({
@@ -343,7 +385,7 @@ export function buildMine(s: State, remote: Remote): { docs: Doc[]; state: State
       saved_by: pChanged ? OT.me : pItem!.newest.saved_by,
       writers: [...new Set([...(pItem?.files.flatMap((f) => f.doc.writers) ?? []), OT.me])].sort(),
     })
-    patch(g0.id, { taskPlanId: planId, taskPlanSeen: pAt })
+    patch(g0.id, { planId, planSeen: pAt, planTitle: title })
   }
   return { docs, state: { ...s, goals, logs } }
 }
@@ -351,7 +393,7 @@ export function buildMine(s: State, remote: Remote): { docs: Doc[]; state: State
 /** Start or stop sharing one of my goals. Stopping leaves the files on the branch as they were. */
 export const shareGoal = (s: State, goalId: string, on: boolean): State => ({
   ...s,
-  goals: s.goals.map((g) => (g.id === goalId ? (on ? { ...g, shareId: g.shareId ?? crypto.randomUUID() } : { ...g, shareId: undefined, shareSeen: undefined, taskPlanId: undefined, taskPlanSeen: undefined }) : g)),
+  goals: s.goals.map((g) => (g.id === goalId ? (on ? { ...g, shareId: g.shareId ?? crypto.randomUUID() } : { ...g, shareId: undefined, shareSeen: undefined, planId: undefined, planSeen: undefined, planTitle: undefined, planText: undefined }) : g)),
   logs: on ? s.logs : s.logs.filter((l) => !(l.goalId === goalId && l.ext)),
 })
 

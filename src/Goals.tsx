@@ -265,6 +265,21 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
         </div>
       </div>
 
+      {goal.shareId && (
+        <div className="card plan-card">
+          <div className="bd-head">
+            <h3>Plan and context</h3>
+            <span className="muted small">Shared with your partner. The tasks below are sent as this plan's checklist.</span>
+          </div>
+          <textarea
+            rows={Math.min(14, Math.max(4, (goal.planText ?? '').split('\n').length + 1))}
+            value={goal.planText ?? ''}
+            placeholder="Context, roadmap, ideas: whatever you both need to pick this up again."
+            onChange={(e) => patchGoal({ planText: e.target.value })}
+          />
+        </div>
+      )}
+
       <div className="two-col">
         <div className="card">
           <h3>Tasks</h3>
