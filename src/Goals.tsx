@@ -4,7 +4,7 @@ import { SpacePicker } from './SpaceUI'
 import { SPACES } from './config'
 import type { Goal } from './types'
 import { daysLeftLabel, fmtDay, fmtDur, today } from './dates'
-import { doneTasks, logsByDay, newTask, queue, setQueue, updateTask } from './logic'
+import { doneLog, doneTasks, logsByDay, newTask, queue, setQueue, undoneLog, updateTask } from './logic'
 import { Grid } from './Grid'
 
 type Kind = 'mine' | 'team'
@@ -245,7 +245,7 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                   <span className={l.note ? 'pre' : ''}>
                     {l.note && <span className="note-tag">note</span>}
                     {l.by && <span className="log-by">{l.by} · </span>}
-                    {l.taskId && <span className="log-src">{taskTitle(l.taskId) ?? 'Task'} · </span>}
+                    {l.taskId && !l.done && <span className="log-src">{taskTitle(l.taskId) ?? 'Task'} · </span>}
                     {l.text}
                   </span>
                   {!l.ext && (
@@ -382,7 +382,7 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                   <button className={`icon ${x.important ? 'i-on' : ''}`} title="Important" onClick={() => set((st) => updateTask(st, x.id, { important: !x.important }))}>
                     {x.important ? '★' : '☆'}
                   </button>
-                  <button className="icon" title="Mark done" onClick={() => set((st) => updateTask(st, x.id, { status: 'done', completedAt: Date.now(), ...(by ? { doneBy: by } : {}) }))}>
+                  <button className="icon" title="Mark done" onClick={() => set((st) => doneLog(updateTask(st, x.id, { status: 'done', completedAt: Date.now(), ...(by ? { doneBy: by } : {}) }), x, by))}>
                     ✓
                   </button>
                   <button
@@ -410,7 +410,7 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                   <div key={x.id} className="q-item done-item">
                     <span className="struck">{x.title}</span>
                     <span className="took">{[x.doneBy && `by ${x.doneBy}`, x.timeMs > 0 && `took ${fmtDur(x.timeMs)}`].filter(Boolean).join(' · ')}</span>
-                    <button className="icon" title="Reopen" onClick={() => set((st) => ({ ...updateTask(st, x.id, { status: 'open', completedAt: null, order: -Date.now() }) }))}>
+                    <button className="icon" title="Reopen" onClick={() => set((st) => undoneLog(updateTask(st, x.id, { status: 'open', completedAt: null, order: -Date.now() }), x.id))}>
                       ↺
                     </button>
                   </div>

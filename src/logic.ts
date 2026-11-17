@@ -118,7 +118,7 @@ export function finishWork(s0: State, taskId: string, outcome: Outcome, by?: str
   if (outcome === 'skip') s = patchToday(s, (td) => ({ ...td, skipped: [...td.skipped, t.id], extra: td.extra.filter((x) => x !== t.id) }))
   if (outcome === 'done') {
     order = order.filter((x) => x !== t.id)
-    s = updateTask(s, t.id, { status: 'done', inProgress: false, completedAt: Date.now(), ...(by ? { doneBy: by } : {}) })
+    s = doneLog(updateTask(s, t.id, { status: 'done', inProgress: false, completedAt: Date.now(), ...(by ? { doneBy: by } : {}) }), t, by)
     s = patchToday(s, (td) => ({ ...td, extra: td.extra.filter((x) => x !== t.id) }))
   }
   s = setQueue(s, order)
@@ -137,6 +137,14 @@ export function addPlanTasks(s: State, parent: Task, titles: string[], index = 0
   const pos = at >= 0 ? at + 1 : lastChild >= 0 ? lastChild + 1 : Math.min(index, ids.length)
   return setQueue({ ...s, tasks: [...s.tasks, ...created] }, [...ids.slice(0, pos), ...created.map((c) => c.id), ...ids.slice(pos)])
 }
+
+/** Finishing a task counts as getting something done, so it is logged on today's box. */
+export const doneLog = (s: State, task: Task, by?: string): State => ({
+  ...s,
+  logs: [...s.logs.filter((l) => !(l.done && l.taskId === task.id)), { id: uid(), goalId: task.goalId, date: today(), text: `Done: ${task.title}`, taskId: task.id, done: true, createdAt: Date.now(), ...(by ? { by } : {}) }],
+})
+/** Reopening a task takes its "done" log back. */
+export const undoneLog = (s: State, taskId: string): State => ({ ...s, logs: s.logs.filter((l) => !(l.done && l.taskId === taskId)) })
 
 /** A quick log: one line about something you just got done, counted on today's box of the goal. */
 export function addLog(s: State, task: Task, text: string, by?: string): State {

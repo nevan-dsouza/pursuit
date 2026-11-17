@@ -32,6 +32,8 @@ export interface Log {
   taskId: string | null
   /** longer notes saved with a task; shown with the day, but not counted as a log */
   note?: boolean
+  /** written automatically when its task was finished; removed again if the task is reopened */
+  done?: boolean
   by?: string // who wrote it (spaces, or a sharing partner)
   /** a partner's entry from the shared branch: read-only, refreshed on every pull */
   ext?: boolean
