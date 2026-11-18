@@ -164,7 +164,7 @@ export default function App() {
   const t0 = today()
   const myList = todayList(s)
   const curId = focus?.k === 'mine' && myList.some((t) => t.id === focus.id) ? focus.id : myList[0]?.id
-  const doneToday = s.tasks.filter((t) => t.status === 'done' && t.completedAt && keyOf(new Date(t.completedAt)) === t0).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
+  const doneToday = s.tasks.filter((t) => (t.status === 'done' && t.completedAt && keyOf(new Date(t.completedAt)) === t0) || (t.doneDays ?? []).includes(t0)).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
   const home = <Home go={go} now={now} focus={focus} onFocus={onFocus} setFocus={setFocus} />
 
   return (
@@ -201,7 +201,7 @@ export default function App() {
               <span>My tasks</span>
               <span className="muted small">{fmtDay(t0)}</span>
             </div>
-            <TaskGroup ws={mine} list={myList} curId={view === 'home' ? curId : undefined} onFocus={(id) => onFocus('mine', id)} emptyText={s.goals.length ? 'No open tasks.' : 'Create a goal to add tasks.'} />
+            <TaskGroup ws={mine} list={myList} curId={view === 'home' ? curId : undefined} onFocus={(id) => onFocus('mine', id)} emptyText="Nothing to do right now. Add a task below." />
             {doneToday.length > 0 && (
               <>
                 <div className="side-label tl-done-label">Done today · {doneToday.length}</div>

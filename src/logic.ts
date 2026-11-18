@@ -1,6 +1,6 @@
-import type { State, Task, TodayState } from './types'
+import type { Goal, State, Task, TodayState } from './types'
 import { uid } from './store'
-import { addDays, keyOf, today } from './dates'
+import { addDays, daysLeftLabel, keyOf, today, weekday } from './dates'
 
 export const queue = (s: State, goalId: string) =>
   s.tasks.filter((t) => t.goalId === goalId && t.status === 'open').sort((a, b) => a.order - b.order)
@@ -67,9 +67,40 @@ export const todayState = (s: State): TodayState =>
 
 export const patchToday = (s: State, f: (t: TodayState) => TodayState): State => ({ ...s, today: f(todayState(s)) })
 
-/** A task is due on its milestone's date, otherwise on its goal's deadline. */
+export const NO_DUE = '9999-12-31'
+/** A task is due on its milestone's date, otherwise on its goal's deadline. Tasks of ongoing goals have no due date. */
 export const taskDue = (s: State, t: Task) =>
-  s.milestones.find((m) => m.id === t.milestoneId)?.date ?? s.goals.find((g) => g.id === t.goalId)?.deadline ?? '9999-12-31'
+  s.milestones.find((m) => m.id === t.milestoneId)?.date ?? (s.goals.find((g) => g.id === t.goalId)?.deadline || NO_DUE)
+
+export const goalDueLabel = (g: Goal) => (g.inbox ? 'no deadline' : g.ongoing || !g.deadline ? 'ongoing' : daysLeftLabel(g.deadline))
+
+/* ---------- Repeating tasks ---------- */
+
+export const REPEATS: [string, string][] = [
+  ['', 'Does not repeat'],
+  ['daily', 'Every day'],
+  ['weekdays', 'Weekdays'],
+  ['5', '5× a week'],
+  ['3', '3× a week'],
+  ['2', '2× a week'],
+  ['1', 'Once a week'],
+]
+export const repeatLabel = (r: Task['repeat']) => (r === 'daily' ? 'every day' : r === 'weekdays' ? 'weekdays' : r === 1 ? 'once a week' : r ? `${r}× a week` : '')
+export const parseRepeat = (v: string): Task['repeat'] => (v === 'daily' || v === 'weekdays' ? v : Number(v) || undefined)
+export const doneOn = (t: Task, day: string) => !!t.doneDays?.includes(day)
+/** How many times a repeating task was done in the week (Mon to Sun) that holds `day`. */
+export function doneThisWeek(t: Task, day = today()) {
+  const mon = addDays(day, -weekday(day))
+  return (t.doneDays ?? []).filter((d) => d >= mon && d <= addDays(mon, 6)).length
+}
+/** Is this task something to do today? One-off tasks always are; repeating ones only when their turn has come. */
+export function dueToday(t: Task, day = today()) {
+  if (!t.repeat) return true
+  if (doneOn(t, day)) return false
+  if (t.repeat === 'daily') return true
+  if (t.repeat === 'weekdays') return weekday(day) < 5
+  return doneThisWeek(t, day) < t.repeat
+}
 
 /**
  * The Home list: every open task from every goal, minus anything marked "not today".
@@ -82,7 +113,7 @@ export function todayList(s: State): Task[] {
   const goalPos = new Map(s.goals.map((g, i) => [g.id, i]))
   const rank = (t: Task) => (t.crucial ? 0 : t.important ? 1 : 2)
   const auto = s.tasks
-    .filter((t) => t.status === 'open' && !skip.has(t.id) && goalPos.has(t.goalId))
+    .filter((t) => t.status === 'open' && !skip.has(t.id) && goalPos.has(t.goalId) && dueToday(t))
     .sort((a, b) => rank(a) - rank(b) || taskDue(s, a).localeCompare(taskDue(s, b)) || goalPos.get(a.goalId)! - goalPos.get(b.goalId)! || a.order - b.order)
   if (!td.order) return auto
   const pos = (id: string) => {
@@ -116,6 +147,11 @@ export function finishWork(s0: State, taskId: string, outcome: Outcome, by?: str
 
   if (outcome === 'progress') s = updateTask(s, t.id, { inProgress: true })
   if (outcome === 'skip') s = patchToday(s, (td) => ({ ...td, skipped: [...td.skipped, t.id], extra: td.extra.filter((x) => x !== t.id) }))
+  if (outcome === 'done' && t.repeat) {
+    // a repeating task is never finished for good: it is done for today and comes back by itself
+    s = doneLog(updateTask(s, t.id, { doneDays: [...(t.doneDays ?? []).filter((d) => d !== today()), today()], notesDraft: '' }), t, by, true)
+    return { state: s, created: 0, logged: !!notes }
+  }
   if (outcome === 'done') {
     order = order.filter((x) => x !== t.id)
     s = doneLog(updateTask(s, t.id, { status: 'done', inProgress: false, completedAt: Date.now(), ...(by ? { doneBy: by } : {}) }), t, by)
@@ -139,12 +175,26 @@ export function addPlanTasks(s: State, parent: Task, titles: string[], index = 0
 }
 
 /** Finishing a task counts as getting something done, so it is logged on today's box. */
-export const doneLog = (s: State, task: Task, by?: string): State => ({
+export const doneLog = (s: State, task: Task, by?: string, repeating = false): State => ({
   ...s,
-  logs: [...s.logs.filter((l) => !(l.done && l.taskId === task.id)), { id: uid(), goalId: task.goalId, date: today(), text: `Done: ${task.title}`, taskId: task.id, done: true, createdAt: Date.now(), ...(by ? { by } : {}) }],
+  logs: [...s.logs.filter((l) => !(l.done && l.taskId === task.id && (!repeating || l.date === today()))), { id: uid(), goalId: task.goalId, date: today(), text: `Done: ${task.title}`, taskId: task.id, done: true, createdAt: Date.now(), ...(by ? { by } : {}) }],
 })
 /** Reopening a task takes its "done" log back. */
 export const undoneLog = (s: State, taskId: string): State => ({ ...s, logs: s.logs.filter((l) => !(l.done && l.taskId === taskId)) })
+/** Tick or untick a repeating task for today. */
+export function toggleRepeatDone(s: State, t: Task, by?: string): State {
+  const day = today()
+  if (doneOn(t, day)) return { ...updateTask(s, t.id, { doneDays: (t.doneDays ?? []).filter((d) => d !== day) }), logs: s.logs.filter((l) => !(l.done && l.taskId === t.id && l.date === day)) }
+  return doneLog(updateTask(s.timer?.taskId === t.id ? commitTimer(s, by) : s, t.id, { doneDays: [...(t.doneDays ?? []), day] }), t, by, true)
+}
+
+/** The built-in "To-dos" goal for one-off tasks; created the first time it is needed. */
+export function withInbox(s: State): { state: State; id: string } {
+  const have = s.goals.find((g) => g.inbox)
+  if (have) return { state: s, id: have.id }
+  const g: Goal = { id: uid(), title: 'To-dos', startDate: today(), deadline: '', ongoing: true, inbox: true, createdAt: Date.now() }
+  return { state: { ...s, goals: [...s.goals, g] }, id: g.id }
+}
 
 /** A quick log: one line about something you just got done, counted on today's box of the goal. */
 export function addLog(s: State, task: Task, text: string, by?: string): State {
@@ -175,6 +225,7 @@ export function activeDays(s: State) {
   for (const l of s.logs) if (!l.ext) d.add(l.date)
   for (const x of s.sessions ?? []) d.add(x.date)
   for (const t of s.tasks) if (t.status === 'done' && t.completedAt) d.add(keyOf(new Date(t.completedAt)))
+  for (const t of s.tasks) for (const x of t.doneDays ?? []) d.add(x)
   return d
 }
 
@@ -205,7 +256,7 @@ export function recentDays(s: State, n: number) {
     const date = addDays(t, i - n + 1)
     return {
       date,
-      done: s.tasks.filter((x) => x.status === 'done' && x.completedAt && keyOf(new Date(x.completedAt)) === date).length,
+      done: s.tasks.filter((x) => (x.status === 'done' && x.completedAt && keyOf(new Date(x.completedAt)) === date) || doneOn(x, date)).length,
       ms: (s.sessions ?? []).filter((x) => x.date === date).reduce((a, x) => a + x.ms, 0),
       logs: s.logs.filter((l) => l.date === date && !l.note && !l.ext).length,
     }

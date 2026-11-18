@@ -2,8 +2,15 @@ export interface Goal {
   id: string
   title: string
   startDate: string // YYYY-MM-DD
-  deadline: string // YYYY-MM-DD
+  deadline: string // YYYY-MM-DD; empty for an ongoing goal
   createdAt: number
+  /** no end date: a habit or an area you keep working on (reading, gym) */
+  ongoing?: boolean
+  /** the built-in place for one-off to-dos that belong to no goal */
+  inbox?: boolean
+  /** where its tile sits on the Goals page */
+  sectionId?: string | null
+  pos?: number
   /** shared with a onetask partner: the item's id on the shared branch, and the newest save seen */
   shareId?: string
   shareSeen?: string
@@ -61,6 +68,16 @@ export interface Task {
   createdAt: number
   completedAt: number | null
   doneBy?: string // who finished it (spaces only)
+  /** comes back by itself: every day, on weekdays, or N times a week (1 to 6) */
+  repeat?: 'daily' | 'weekdays' | number
+  /** the days a repeating task was done */
+  doneDays?: string[]
+}
+
+/** A heading on the Goals page that goal tiles are grouped under. */
+export interface Section {
+  id: string
+  name: string
 }
 
 /** Timer for the task currently shown on Home. */
@@ -101,6 +118,7 @@ export interface State {
   focusId: string | null
   today: TodayState
   sessions: Session[]
+  sections?: Section[]
   /** days on which you did something in Pursuit; kept even if the goal or task is later deleted */
   activeDates: string[]
   tutorialSeen: boolean

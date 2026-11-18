@@ -4,6 +4,8 @@ import { addDays, diffDays, fmtDay, monthShort, today, weekday } from './dates'
 interface Props {
   start: string
   deadline: string
+  /** last day drawn, when it is not the deadline (ongoing goals have none) */
+  end?: string
   counts: Map<string, number>
   milestones: Map<string, string[]> // date -> titles
   selected: string | null
@@ -13,10 +15,10 @@ interface Props {
 const level = (n: number) => (n <= 0 ? 0 : n === 1 ? 1 : n === 2 ? 2 : n <= 4 ? 3 : 4)
 
 /** GitHub-style grid covering the goal's timeline. Columns = weeks, rows = Mon..Sun. */
-export function Grid({ start, deadline, counts, milestones, selected, onSelect }: Props) {
+export function Grid({ start, deadline, end: last, counts, milestones, selected, onSelect }: Props) {
   const [tip, setTip] = useState<{ x: number; y: number; lines: string[] } | null>(null)
   const gridStart = addDays(start, -weekday(start))
-  const end = deadline < start ? start : deadline
+  const end = last ?? (deadline < start ? start : deadline)
   const gridEnd = addDays(end, 6 - weekday(end))
   const weeks = Math.round((diffDays(gridStart, gridEnd) + 1) / 7)
   const cell = weeks <= 8 ? 30 : weeks <= 16 ? 24 : weeks <= 26 ? 18 : 14 // bigger boxes for shorter goals

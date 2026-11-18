@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore, type Ws } from './store'
 import type { Task, View } from './types'
 import { daysLeftLabel, diffDays, fmtClock, fmtDay, fmtDur, keyOf, today } from './dates'
-import { addLog, addPlanTasks, commitTimer, finishWork, newTask, poaLines, patchToday, taskDue, timerElapsed, todayList, todayState, updateTask, type Outcome } from './logic'
+import { NO_DUE, REPEATS, addLog, addPlanTasks, commitTimer, doneOn, finishWork, newTask, parseRepeat, poaLines, patchToday, repeatLabel, taskDue, timerElapsed, todayList, todayState, updateTask, withInbox, type Outcome } from './logic'
 import { SpacePicker } from './SpaceUI'
 import { SPACES } from './config'
 
@@ -18,7 +18,9 @@ export function TaskGroup({ ws, list, curId, onFocus, emptyText }: { ws: Ws; lis
   const [goalId, setGoalId] = useState('')
   const [drag, setDrag] = useState<string | null>(null)
   const goalOf = (id: string) => s.goals.find((g) => g.id === id)
-  const addGoalId = goalId && goalOf(goalId) ? goalId : s.goals[0]?.id
+  const INBOX = '__todos'
+  const hasInbox = s.goals.some((g) => g.inbox)
+  const addGoalId = goalId && (goalId === INBOX || goalOf(goalId)) ? goalId : (s.goals.find((g) => g.inbox)?.id ?? (hasInbox ? s.goals[0]?.id : INBOX))
   const removed = s.tasks.filter((t) => t.status === 'open' && todayState(s).skipped.includes(t.id))
 
   const reorder = (ids: string[]) => set((st) => patchToday(st, (td) => ({ ...td, order: ids })))
@@ -44,7 +46,11 @@ export function TaskGroup({ ws, list, curId, onFocus, emptyText }: { ws: Ws; lis
   const bringBack = (id: string) => set((st) => patchToday(st, (td) => ({ ...td, skipped: td.skipped.filter((x) => x !== id) })))
   const create = () => {
     if (!title.trim() || !addGoalId) return
-    set((st) => ({ ...st, tasks: [...st.tasks, newTask(addGoalId, title.trim())] }))
+    set((st) => {
+      // "To-dos" is made the first time a task is added without a goal
+      const { state, id } = addGoalId === INBOX ? withInbox(st) : { state: st, id: addGoalId }
+      return { ...state, tasks: [...state.tasks, newTask(id, title.trim())] }
+    })
     setTitle('')
   }
 
@@ -67,6 +73,7 @@ export function TaskGroup({ ws, list, curId, onFocus, emptyText }: { ws: Ws; lis
               <span className={`tl-title ${tone(t)}`}>{t.title}</span>
               <span className="tl-meta">
                 {goalOf(t.goalId)?.title}
+                {t.repeat && <span className="tl-rep"> · ↻</span>}
                 {t.inProgress && <span className="tl-badge">in progress</span>}
                 {s.timer?.taskId === t.id && <span className="tl-live" title="Timer session open" />}
               </span>
@@ -106,18 +113,17 @@ export function TaskGroup({ ws, list, curId, onFocus, emptyText }: { ws: Ws; lis
           </button>
         </div>
       )}
-      {s.goals.length > 0 && (
-        <button className="link small tl-add" onClick={() => setAdding(!adding)}>
-          {adding ? '− Close' : '+ Add a task'}
-        </button>
-      )}
-      {adding && s.goals.length > 0 && (
+      <button className="link small tl-add" onClick={() => setAdding(!adding)}>
+        {adding ? '− Close' : '+ Add a task'}
+      </button>
+      {adding && (
         <div className="tl-picker">
           <input autoFocus placeholder="New task…" value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && create()} />
-          <select value={addGoalId} onChange={(e) => setGoalId(e.target.value)} title="Goal for the new task">
-            {s.goals.map((g) => (
+          <select value={addGoalId} onChange={(e) => setGoalId(e.target.value)} title="Where the new task goes">
+            {!hasInbox && <option value={INBOX}>To-dos (no goal)</option>}
+            {[...s.goals].sort((a, b) => Number(!!b.inbox) - Number(!!a.inbox)).map((g) => (
               <option key={g.id} value={g.id}>
-                {g.title}
+                {g.inbox ? 'To-dos (no goal)' : g.title}
               </option>
             ))}
           </select>
@@ -164,12 +170,12 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
     const i = list.findIndex((t) => t.id === task.id)
     const next = list[i + 1] ?? list[i - 1]
     const spent = task.timeMs + (ws.s.timer?.taskId === task.id ? timerElapsed(ws.s, Date.now()) : 0)
-    const steps = outcome === 'done' ? poaLines(task.poaDraft) : []
+    const steps = outcome === 'done' && !task.repeat ? poaLines(task.poaDraft) : []
     const at = ws.s.tasks.filter((t) => t.goalId === task.goalId && t.status === 'open').sort((a, b) => a.order - b.order).findIndex((t) => t.id === task.id)
     const r = finishWork(ws.s, task.id, outcome, ws.by) // for the message only
     ws.set((st) => finishWork(st, task.id, outcome, ws.by).state)
     setFocus(next && next.id !== task.id ? { k: cur.k, id: next.id } : null)
-    const label = outcome === 'done' ? (spent > 0 ? `Done · took ${fmtDur(spent)}` : 'Done') : 'Skipped for today'
+    const label = outcome === 'done' ? (task.repeat ? `Done for today · it comes back by itself (${repeatLabel(task.repeat)})` : spent > 0 ? `Done · took ${fmtDur(spent)}` : 'Done') : 'Skipped for today'
     toast(
       [label, r.logged && 'notes saved'].filter(Boolean).join(' · '),
       steps.length ? { label: `Add ${steps.length} plan step${steps.length > 1 ? 's' : ''} as task${steps.length > 1 ? 's' : ''}`, run: () => ws.set((st) => addPlanTasks(st, task, steps, Math.max(0, at))) } : undefined,
@@ -228,7 +234,7 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
   }
 
   const isToday = (ts: number | null) => !!ts && keyOf(new Date(ts)) === t0
-  const doneToday = [...mine.s.tasks, ...(team?.s.tasks ?? [])].filter((t) => t.status === 'done' && isToday(t.completedAt)).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
+  const doneToday = [...mine.s.tasks, ...(team?.s.tasks ?? [])].filter((t) => (t.status === 'done' && isToday(t.completedAt)) || doneOn(t, t0)).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
 
   const noGoals = !mine.s.goals.length && !team?.s.goals.length
   const s = ws?.s
@@ -285,13 +291,22 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
               <button className={`tag ${task.important ? 'tag-important' : ''}`} onClick={() => ws!.set((st) => updateTask(st, task.id, { important: !task.important }))} title="Important">
                 ★ important
               </button>
-              <span className={`tag static ${diffDays(t0, due) < 0 ? 'tag-crucial' : ''}`} title={milestone ? 'Milestone date' : 'Goal deadline'}>
-                due {fmtDay(due)} · {daysLeftLabel(due)}
-              </span>
+              {due !== NO_DUE && (
+                <span className={`tag static ${diffDays(t0, due) < 0 ? 'tag-crucial' : ''}`} title={milestone ? 'Milestone date' : 'Goal deadline'}>
+                  due {fmtDay(due)} · {daysLeftLabel(due)}
+                </span>
+              )}
               {spentNow > 0 && <span className="tag static">{fmtDur(spentNow)} spent</span>}
+              <select className="tag tag-select" value={String(task.repeat ?? '')} onChange={(e) => ws!.set((st) => updateTask(st, task.id, { repeat: parseRepeat(e.target.value) }))} title="Repeat this task">
+                {REPEATS.map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {v ? `↻ ${l}` : l}
+                  </option>
+                ))}
+              </select>
               {goalMs.length > 0 && (
                 <select className="tag tag-select" value={task.milestoneId ?? ''} onChange={(e) => ws!.set((st) => updateTask(st, task.id, { milestoneId: e.target.value || null }))} title="Milestone for this task">
-                  <option value="">No milestone</option>
+                  <option value="">Counts toward the goal</option>
                   {goalMs.map((m) => (
                     <option key={m.id} value={m.id}>
                       ◆ {m.title}
@@ -339,8 +354,8 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
           </div>
         ) : (
           <div className="task-view">
-            <h1 className="task-title muted-title">{noGoals ? 'Start with a goal' : doneToday.length ? 'All clear for today' : 'Nothing lined up'}</h1>
-            <p className="muted">{noGoals ? 'A goal is the big picture: something you want to achieve by a date.' : 'Add a task to one of your goals and it will show up here.'}</p>
+            <h1 className="task-title muted-title">{doneToday.length ? 'All clear for today' : noGoals ? 'What do you want to get done?' : 'Nothing lined up'}</h1>
+            <p className="muted">{noGoals ? 'Add a quick to-do from the sidebar, or create a goal for something bigger.' : 'Add a task and it will show up here.'}</p>
             <button className="primary" onClick={() => go('goals')}>
               {noGoals ? 'Create a goal' : 'Go to Goals'}
             </button>
@@ -353,7 +368,7 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
           <span>My tasks</span>
           <span className="muted small">{fmtDay(t0)}</span>
         </div>
-        <TaskGroup ws={mine} list={lists.mine} curId={cur?.k === 'mine' ? cur.id : undefined} onFocus={(id) => doFocus('mine', id)} emptyText={mine.s.goals.length ? 'No open tasks.' : 'Create a goal to add tasks.'} />
+        <TaskGroup ws={mine} list={lists.mine} curId={cur?.k === 'mine' ? cur.id : undefined} onFocus={(id) => doFocus('mine', id)} emptyText="Nothing to do right now. Add a task below." />
         {doneToday.length > 0 && (
           <>
             <div className="side-label tl-done-label">Done today · {doneToday.length}</div>

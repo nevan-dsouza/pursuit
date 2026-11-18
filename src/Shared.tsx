@@ -58,7 +58,7 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
   const plans = allPlans.filter((p) => !attached.has(p.id)) // plans that are not yet any goal's plan
   const linked = (id: string) => s.goals.find((g) => g.shareId === id)
   const mineShared = s.goals.filter((g) => g.shareId)
-  const notShared = s.goals.filter((g) => !g.shareId)
+  const notShared = s.goals.filter((g) => !g.shareId && !g.ongoing && g.deadline) // onetask goals need a start and an end
 
   const live = goals.filter((g) => g.sharedBy.length > 0 || linked(g.id))
   const old = goals.filter((g) => !g.sharedBy.length && !linked(g.id))

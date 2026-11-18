@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from './store'
 import type { View } from './types'
 import { daysLeftLabel, fmtDay, fmtDur, today } from './dates'
-import { activeDays, recentDays, streaks } from './logic'
+import { activeDays, goalDueLabel, recentDays, streaks } from './logic'
 import { Brand } from './Brand'
 
 /* ---------- Sign-in ---------- */
@@ -50,9 +50,9 @@ export function Login() {
 
 const STEPS: { title: string; body: string; where?: string }[] = [
   { title: 'Welcome to Pursuit', body: 'Pursuit keeps you moving toward big goals by always showing you the next small thing to do. Here is how it fits together, in about a minute.' },
-  { title: '1. Set a goal', body: 'A goal is the big picture: something you want to achieve by a date, like “Pass the exam by 29 Nov”. Creating one draws a grid with a box for every day until the deadline.', where: 'Goals → New goal' },
-  { title: '2. Mark milestones', body: 'Milestones are targets along the way. Click any day on the grid and type one. That day gets a blue outline with a white dot; the goal itself is the green diamond; today has a pink outline.', where: 'Goals → click a day on the grid' },
-  { title: '3. Add tasks', body: 'Tasks are small pieces of work you can finish in a sitting. They sit in a queue you can reorder. Mark a task ! crucial (red) or ★ important (pink) so it rises to the top of your day.', where: 'Goals → Tasks' },
+  { title: '1. Set a goal', body: 'A goal is the big picture. Give it a deadline, like “Pass the exam by 29 Nov”, or make it ongoing for things you keep doing, like reading or the gym. Each goal gets a grid with a box for every day. For a one-off to-do, skip the goal: add a task from the sidebar and it goes to To-dos.', where: 'Goals → New goal' },
+  { title: '2. Mark milestones', body: 'Milestones are targets along the way. Type one in the Milestones box and pick its day. That day gets a blue outline with a white dot on the grid; the goal itself is the green diamond; today has a pink outline.', where: 'Goals → open a goal → Milestones' },
+  { title: '3. Add tasks', body: 'Tasks are small pieces of work you can finish in a sitting. A task counts toward the goal or toward one of its milestones, and it can repeat (every day, weekdays, a few times a week) so you never retype it. Mark a task ! crucial (red) or ★ important (pink) so it rises to the top of your day.', where: 'Goals → open a goal → Tasks' },
   { title: '4. Work from Home', body: 'Home lists every open task from all your goals in one place, most urgent first: crucial, then important, then nearest deadline. Drag to set your own order. Click a task to focus on it. Press Start to time it, then pick Skip (not today) or Done.', where: 'Home' },
   { title: '5. Log, Notes and POA', body: 'Got something done? Open Log, type one line and press Enter; each log makes today’s box on the goal a brighter purple. Notes are optional, for more detail. POA is your plan of action: one step per box, and any step can become a task.', where: 'Home → Log / Notes / POA (top right)' },
   { title: '6. Timer, streak and stats', body: 'Press Start on a task when you begin; the time is saved to the task. Use Pursuit every day, even just to add or finish one task, and your streak grows. Open Stats to see how you are doing.', where: 'Flame in the sidebar → Stats' },
@@ -188,7 +188,7 @@ export function Stats({ go }: { go: (v: View) => void }) {
         <Stat n={st.best} label="best streak (days)" />
         <Stat n={st.total} label="active days" />
         <Stat n={weekDone} label="tasks done, last 7 days" />
-        <Stat n={doneAll.length} label="tasks done in total" />
+        <Stat n={doneAll.length + s.tasks.reduce((a, t) => a + (t.doneDays?.length ?? 0), 0)} label="tasks done in total" />
         <Stat n={weekMs ? fmtDur(weekMs) : '0m'} label="focus time, last 7 days" />
         <Stat n={totalMs ? fmtDur(totalMs) : '0m'} label="focus time in total" />
         <Stat n={s.logs.filter((l) => !l.note && !l.ext).length} label="logs written" />
@@ -229,7 +229,7 @@ export function Stats({ go }: { go: (v: View) => void }) {
             <div key={g.id} className="goal-stat">
               <div className="gs-head">
                 <b>{g.title}</b>
-                <span className="muted small">{daysLeftLabel(g.deadline)}</span>
+                <span className="muted small">{goalDueLabel(g)}</span>
               </div>
               <div className="gs-bar">
                 <i style={{ width: `${pct}%` }} />
