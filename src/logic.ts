@@ -85,8 +85,18 @@ export const REPEATS: [string, string][] = [
   ['2', '2× a week'],
   ['1', 'Once a week'],
 ]
-export const repeatLabel = (r: Task['repeat']) => (r === 'daily' ? 'every day' : r === 'weekdays' ? 'weekdays' : r === 1 ? 'once a week' : r ? `${r}× a week` : '')
-export const parseRepeat = (v: string): Task['repeat'] => (v === 'daily' || v === 'weekdays' ? v : Number(v) || undefined)
+export const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+export const repeatLabel = (r: Task['repeat']) =>
+  Array.isArray(r) ? (r.length === 7 ? 'every day' : r.map((d) => DAY_NAMES[d]).join(', ')) : r === 'daily' ? 'every day' : r === 'weekdays' ? 'weekdays' : r === 1 ? 'once a week' : r ? `${r}× a week` : ''
+/** A repeat as the value of a select option, and back. Chosen days are written as "d:0,2,4". */
+export const repeatValue = (r: Task['repeat']) => (Array.isArray(r) ? `d:${r.join(',')}` : String(r ?? ''))
+export const parseRepeat = (v: string): Task['repeat'] => {
+  if (v.startsWith('d:')) {
+    const days = [...new Set(v.slice(2).split(',').map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort()
+    return days.length ? days : undefined
+  }
+  return v === 'daily' || v === 'weekdays' ? v : Number(v) || undefined
+}
 export const doneOn = (t: Task, day: string) => !!t.doneDays?.includes(day)
 /** How many times a repeating task was done in the week (Mon to Sun) that holds `day`. */
 export function doneThisWeek(t: Task, day = today()) {
@@ -99,6 +109,7 @@ export function dueToday(t: Task, day = today()) {
   if (doneOn(t, day)) return false
   if (t.repeat === 'daily') return true
   if (t.repeat === 'weekdays') return weekday(day) < 5
+  if (Array.isArray(t.repeat)) return t.repeat.includes(weekday(day))
   return doneThisWeek(t, day) < t.repeat
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore, type Ws } from './store'
 import type { Task, View } from './types'
 import { daysLeftLabel, diffDays, fmtClock, fmtDay, fmtDur, keyOf, today } from './dates'
-import { NO_DUE, REPEATS, addLog, addPlanTasks, commitTimer, doneOn, finishWork, newTask, parseRepeat, poaLines, patchToday, repeatLabel, taskDue, timerElapsed, todayList, todayState, updateTask, withInbox, type Outcome } from './logic'
+import { NO_DUE, REPEATS, repeatValue, addLog, addPlanTasks, commitTimer, doneOn, finishWork, newTask, parseRepeat, poaLines, patchToday, repeatLabel, taskDue, timerElapsed, todayList, todayState, updateTask, withInbox, type Outcome } from './logic'
 import { SpacePicker } from './SpaceUI'
 import { SPACES } from './config'
 import { Md, NotesEditor } from './Md'
@@ -314,7 +314,8 @@ export function Home({ go, now, focus, onFocus, setFocus, only, setOnly }: { go:
                 </span>
               )}
               {spentNow > 0 && <span className="tag static">{fmtDur(spentNow)} spent</span>}
-              <select className="tag tag-select" value={String(task.repeat ?? '')} onChange={(e) => ws!.set((st) => updateTask(st, task.id, { repeat: parseRepeat(e.target.value) }))} title="Repeat this task">
+              <select className="tag tag-select" value={repeatValue(task.repeat)} onChange={(e) => ws!.set((st) => updateTask(st, task.id, { repeat: parseRepeat(e.target.value) }))} title="Repeat this task. Pick exact days on the goal's page.">
+                {Array.isArray(task.repeat) && <option value={repeatValue(task.repeat)}>↻ {repeatLabel(task.repeat)}</option>}
                 {REPEATS.map(([v, l]) => (
                   <option key={v} value={v}>
                     {v ? `↻ ${l}` : l}

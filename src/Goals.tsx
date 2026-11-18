@@ -2,9 +2,9 @@ import { useRef, useState } from 'react'
 import { useStore, uid, type Ws } from './store'
 import { SpacePicker } from './SpaceUI'
 import { SPACES } from './config'
-import type { Goal, State, Task } from './types'
+import type { Goal, Milestone, State, Task } from './types'
 import { addDays, daysLeftLabel, diffDays, fmtDay, fmtDur, today, weekday } from './dates'
-import { REPEATS, doneLog, doneOn, doneTasks, doneThisWeek, goalDueLabel, logsByDay, newTask, parseRepeat, queue, repeatLabel, setQueue, toggleRepeatDone, undoneLog, updateTask } from './logic'
+import { DAY_NAMES, REPEATS, repeatValue, doneLog, doneOn, doneTasks, doneThisWeek, goalDueLabel, logsByDay, newTask, parseRepeat, queue, repeatLabel, setQueue, toggleRepeatDone, undoneLog, updateTask } from './logic'
 import { Grid } from './Grid'
 import { download, fileName, goalBundle, importBundle, toMarkdown } from './exportGoal'
 import { useOwner } from './owner'
@@ -416,10 +416,24 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
     ...dayAll.filter((l) => l.note && (l.text.trim() || l.poa)).map((l) => ({ id: l.id, title: (l.taskId && s.tasks.find((x) => x.id === l.taskId)?.title) || 'Task', notes: l.text, poa: l.poa ?? '', by: l.by, draft: false })),
     ...(day === t ? s.tasks.filter((x) => x.goalId === goal.id && x.status !== 'done' && (x.notesDraft.trim() || x.poaDraft.trim())).map((x) => ({ id: x.id, title: x.title, notes: x.notesDraft, poa: x.poaDraft, by: undefined as string | undefined, draft: true })) : []),
   ]
-  const [content, setContent] = useState(false)
+  const [content, setContent] = useState<null | 'day' | string>(null) // the day's notes, or one task's (by id)
+  const taskNotes = (x: Task) => s.logs.filter((l) => l.taskId === x.id && l.note && (l.text.trim() || l.poa))
+  const hasContent = (x: Task) => !!(x.notesDraft.trim() || x.poaDraft.trim()) || taskNotes(x).length > 0
+  const contentTask = content && content !== 'day' ? s.tasks.find((x) => x.id === content) : undefined
+  const contentItems = contentTask
+    ? [
+        ...(contentTask.status !== 'done' && (contentTask.notesDraft.trim() || contentTask.poaDraft.trim()) ? [{ id: 'draft', title: 'Now', notes: contentTask.notesDraft, poa: contentTask.poaDraft, by: undefined as string | undefined, draft: true }] : []),
+        ...taskNotes(contentTask).sort((a, b) => b.createdAt - a.createdAt).map((l) => ({ id: l.id, title: fmtDay(l.date), notes: l.text, poa: l.poa ?? '', by: l.by, draft: false })),
+      ]
+    : dayContent
+  const [view, setView] = useState<'queue' | 'ms'>('queue')
+  const [custom, setCustom] = useState(false)
   const q = queue(s, goal.id)
   const done = doneTasks(s, goal.id)
   const allTasks = s.tasks.filter((x) => x.goalId === goal.id)
+  const byMs = view === 'ms' && milestones.length > 0
+  const shown = byMs ? q.filter((x) => (x.milestoneId ?? '') === taskMs) : q
+  const shownDone = byMs ? done.filter((x) => (x.milestoneId ?? '') === taskMs) : done
   const taskTitle = (id: string | null) => (id ? s.tasks.find((x) => x.id === id)?.title : undefined)
 
   const patchGoal = (p: Partial<Goal>) =>
@@ -524,9 +538,8 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
   const msCard = (
     <>
       {!goal.inbox && (
-        <div className="card">
+        <div className="ms-sec">
           <h3>Milestones</h3>
-          <p className="muted small">Targets along the way, each on a day. Add one here or by selecting a box on the grid.</p>
           {!msForm && (
             <button className="link small" onClick={() => setMsForm(true)}>
               + Add a milestone
@@ -557,12 +570,31 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                 >
                   {m.done ? '✓' : ''}
                 </button>
-                <button className="ms-body" onClick={() => pick(clamp(m.date))} title="Show this day on the grid">
+                <button
+                  className="ms-body"
+                  onClick={() => {
+                    pick(clamp(m.date))
+                    setView('ms')
+                    setTaskMs(m.id)
+                  }}
+                  title="Show this day on the grid and this milestone's tasks"
+                >
                   <span className={m.done ? 'struck' : ''}>{m.title}</span>
                   <span className="muted small">
                     {fmtDay(m.date)} · {daysLeftLabel(m.date)}
-                    {mt.length > 0 && ` · ${md}/${mt.length} tasks`}
                   </span>
+                  {mt.length > 0 ? (
+                    <span className="ms-prog" title={`${md} of ${mt.length} tasks done`}>
+                      <span className="ms-bar">
+                        <i style={{ width: `${(md / mt.length) * 100}%` }} />
+                      </span>
+                      <span className="muted small">
+                        {md}/{mt.length} tasks
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="muted small ms-none">No tasks linked yet</span>
+                  )}
                 </button>
               </div>
             )
@@ -573,14 +605,14 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
     </>
   )
   const timelineCard = (
-    <div className="card timeline">
-      <div className="tl-grid">
+    <div className="gp-left">
+      <div className="card gp-grid">
         <Grid start={from} deadline={goal.deadline} end={end} counts={logsByDay(s, goal.id)} milestones={msByDay} selected={day} onSelect={(d) => pick(d === day ? null : d)} />
       </div>
 
-      <div className="day-side" key={day ?? 'none'}>
+      <div className="card gp-day">
+      <div className="gp-day-top" key={day ?? 'none'}>
         {!day ? (
-          <div className="day-rest">
             <div className="day-hint">
               <span className="day-hint-ico" aria-hidden>
                 <i />
@@ -592,8 +624,6 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                 <b>Select any box on the grid</b> <span className="muted">{goal.inbox ? 'to see or add a log for that day.' : 'to add a milestone or a log for that day.'}</span>
               </span>
             </div>
-            {msCard}
-          </div>
         ) : (
           <>
             <div className="day-title">
@@ -619,7 +649,7 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                 <span className="muted small day-note">Logs are for today or earlier.</span>
               )}
               {dayContent.length > 0 && (
-                <button className="day-act" onClick={() => setContent(true)} title="Notes and plans of action written on this day">
+                <button className="day-act" onClick={() => setContent('day')} title="Notes and plans of action written on this day">
                   View content
                 </button>
               )}
@@ -701,21 +731,23 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
           </>
         )}
       </div>
-      {content && day && (
-        <div className="overlay" onClick={() => setContent(false)} onKeyDown={(e) => e.key === 'Escape' && setContent(false)}>
-          <div className="content-modal" role="dialog" aria-label={`Notes and plans for ${fmtDay(day)}`} onClick={(e) => e.stopPropagation()}>
+      {msCard}
+      </div>
+      {content && (contentTask || day) && (
+        <div className="overlay" onClick={() => setContent(null)} onKeyDown={(e) => e.key === 'Escape' && setContent(null)}>
+          <div className="content-modal" role="dialog" aria-label="Notes and plans of action" onClick={(e) => e.stopPropagation()}>
             <div className="cm-head">
               <div>
-                <h2 className="modal-title">{fmtDay(day)}</h2>
+                <h2 className="modal-title">{contentTask ? contentTask.title : fmtDay(day!)}</h2>
                 <div className="muted small">Notes and plans of action · {goal.title}</div>
               </div>
               <div className="spacer" />
-              <button className="icon" onClick={() => setContent(false)} aria-label="Close" autoFocus>
+              <button className="icon" onClick={() => setContent(null)} aria-label="Close" autoFocus>
                 ×
               </button>
             </div>
             <div className="cm-body">
-              {dayContent.map((c) => (
+              {contentItems.map((c) => (
                 <section key={c.id} className="cm-task">
                   <h3>
                     {c.title}
@@ -749,54 +781,44 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
   const tasksCard = (
     <div className="card tasks-card">
       <div className="tasks-head">
-      <h3>Tasks</h3>
-      <div className="add-task">
+        <h3>Tasks</h3>
+        {milestones.length > 0 && (
+          <div className="seg mini" role="tablist">
+            <button className={view === 'queue' ? 'on' : ''} onClick={() => (setView('queue'), setTaskMs(''))} title="Every open task, in the order you will work on them. Drag to reorder.">
+              Action queue
+            </button>
+            <button className={view === 'ms' ? 'on' : ''} onClick={() => setView('ms')} title="Only the tasks of one milestone">
+              By milestone
+            </button>
+          </div>
+        )}
+        {byMs && (
+          <select className="ms-pick" value={taskMs} onChange={(e) => setTaskMs(e.target.value)} aria-label="Milestone">
+            <option value="">The goal itself (no milestone)</option>
+            {milestones.map((m) => (
+              <option key={m.id} value={m.id}>
+                ◆ {m.title} · {fmtDay(m.date)}
+              </option>
+            ))}
+          </select>
+        )}
+        <span className="muted small tasks-count">
+          {shown.length} open{byMs && shownDone.length + shown.length > 0 ? ` · ${shownDone.length}/${shownDone.length + shown.filter((x) => !x.repeat).length} done` : ''}
+        </span>
+      </div>
+      <div className="add-row">
         <input ref={taskInput} placeholder={open ? 'Add a task, e.g. Read 20 pages' : 'Add a task…'} value={taskText} onChange={(e) => setTaskText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} />
+        <button className={`small-btn ghost ${custom || taskRep ? 'on' : ''}`} onClick={() => setCustom(!custom)} title="Link it to a milestone, make it repeat on chosen days" aria-expanded={custom}>
+          Customize
+        </button>
         <button className="primary add-btn" disabled={!taskText.trim()} onClick={() => (addTask(), taskInput.current?.focus())}>
           Add
         </button>
       </div>
-      <div className="add-opts">
-        {milestones.length > 0 && (
-          <label>
-            <span>Counts toward</span>
-            <select
-              value={taskMs}
-              onChange={(e) => {
-                setTaskMs(e.target.value)
-                taskInput.current?.focus()
-              }}
-            >
-              <option value="">The goal itself (no milestone)</option>
-              {milestones.map((m) => (
-                <option key={m.id} value={m.id}>
-                  ◆ {m.title} · {fmtDay(m.date)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <label>
-          <span>Repeats</span>
-          <select
-            value={taskRep}
-            onChange={(e) => {
-              setTaskRep(e.target.value)
-              taskInput.current?.focus()
-            }}
-          >
-            {REPEATS.map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      </div>
+      {custom && <TaskOptions milestones={milestones} milestoneId={taskMs} repeat={parseRepeat(taskRep)} onMs={setTaskMs} onRepeat={(r) => setTaskRep(repeatValue(r))} />}
       <div className="tasks-scroll">
         <div className="queue">
-          {q.map((x, i) => {
+          {shown.map((x, i) => {
             const m = milestones.find((mm) => mm.id === x.milestoneId)
             return (
               <div
@@ -818,6 +840,7 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                   <span className="q-edit">
                     <input
                       autoFocus
+                      ref={(el) => void (el && requestAnimationFrame(() => el.closest('.q-item')?.scrollIntoView({ block: 'nearest' })))}
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
                       onKeyDown={(e) => {
@@ -825,46 +848,10 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                         if (e.key === 'Escape') setEditId(null)
                       }}
                     />
-                    {milestones.length > 0 && (
-                      <select
-                        value={x.milestoneId ?? ''}
-                        onChange={(e) =>
-                          set((st) =>
-                            updateTask(st, x.id, {
-                              milestoneId: e.target.value || null,
-                            }),
-                          )
-                        }
-                        title="What this task counts toward"
-                      >
-                        <option value="">The goal itself (no milestone)</option>
-                        {milestones.map((mm) => (
-                          <option key={mm.id} value={mm.id}>
-                            {mm.title}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    <select
-                      value={String(x.repeat ?? '')}
-                      onChange={(e) =>
-                        set((st) =>
-                          updateTask(st, x.id, {
-                            repeat: parseRepeat(e.target.value),
-                          }),
-                        )
-                      }
-                      title="Repeat"
-                    >
-                      {REPEATS.map(([v, l]) => (
-                        <option key={v} value={v}>
-                          {l}
-                        </option>
-                      ))}
-                    </select>
                     <button className="primary" onClick={saveEdit}>
                       Save
                     </button>
+                    <TaskOptions milestones={milestones} milestoneId={x.milestoneId ?? ''} repeat={x.repeat} onMs={(v) => set((st) => updateTask(st, x.id, { milestoneId: v || null }))} onRepeat={(r) => set((st) => updateTask(st, x.id, { repeat: r }))} />
                   </span>
                 ) : (
                   <span className={`q-title ${x.crucial ? 'crucial' : x.important ? 'important' : ''}`}>
@@ -888,11 +875,17 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                     title="Move up"
                     onClick={() => {
                       const ids = q.map((y) => y.id)
-                      ;[ids[i - 1], ids[i]] = [ids[i], ids[i - 1]]
+                      const [a, b] = [ids.indexOf(shown[i - 1].id), ids.indexOf(x.id)]
+                      ;[ids[a], ids[b]] = [ids[b], ids[a]]
                       set((st) => setQueue(st, ids))
                     }}
                   >
                     ↑
+                  </button>
+                )}
+                {hasContent(x) && (
+                  <button className="icon has-content" title="View notes and plan of action" onClick={() => setContent(x.id)}>
+                    ≡
                   </button>
                 )}
                 <button className={`icon ${x.crucial ? 'c-on' : ''}`} title="Crucial" onClick={() => set((st) => updateTask(st, x.id, { crucial: !x.crucial }))}>
@@ -942,18 +935,23 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
               </div>
             )
           })}
-          {!q.length && <div className="muted small pad-y">No open tasks.</div>}
+          {!shown.length && <div className="muted small pad-y">{byMs ? 'No open tasks here yet. Add one above and it is linked to this milestone.' : 'No open tasks.'}</div>}
         </div>
-        {done.length > 0 && (
+        {shownDone.length > 0 && (
           <>
             <button className="link small" onClick={() => setShowDone(!showDone)}>
-              {showDone ? '▾' : '▸'} Done · {done.length}
+              {showDone ? '▾' : '▸'} Done · {shownDone.length}
             </button>
             {showDone &&
-              done.map((x) => (
+              shownDone.map((x) => (
                 <div key={x.id} className="q-item done-item">
                   <span className="struck">{x.title}</span>
                   <span className="took">{[x.doneBy && `by ${x.doneBy}`, x.timeMs > 0 && `took ${fmtDur(x.timeMs)}`].filter(Boolean).join(' · ')}</span>
+                  {hasContent(x) && (
+                    <button className="icon has-content" title="View notes and plan of action" onClick={() => setContent(x.id)}>
+                      ≡
+                    </button>
+                  )}
                   <button
                     className="icon"
                     title="Reopen"
@@ -1062,11 +1060,64 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
         </div>
       </header>
 
-      {timelineCard}
-      <div className={`bottom ${goal.shareId ? 'split' : ''}`}>
-        {tasksCard}
-        {planCard}
+      <div className="gp">
+        {timelineCard}
+        <div className="gp-right">
+          {tasksCard}
+          {planCard}
+        </div>
       </div>
+    </div>
+  )
+}
+
+/** What a task counts toward and when it repeats. Used when adding a task and when editing one. */
+function TaskOptions({ milestones, milestoneId, repeat, onMs, onRepeat }: { milestones: Milestone[]; milestoneId: string; repeat: Task['repeat']; onMs: (id: string) => void; onRepeat: (r: Task['repeat']) => void }) {
+  const days = Array.isArray(repeat) ? repeat : null
+  return (
+    <div className="task-opts">
+      {milestones.length > 0 && (
+        <label>
+          <span>Counts toward</span>
+          <select value={milestoneId} onChange={(e) => onMs(e.target.value)}>
+            <option value="">The goal itself (no milestone)</option>
+            {milestones.map((m) => (
+              <option key={m.id} value={m.id}>
+                ◆ {m.title} · {fmtDay(m.date)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <label>
+        <span>Repeats</span>
+        <select value={days ? 'days' : repeatValue(repeat)} onChange={(e) => onRepeat(e.target.value === 'days' ? [weekday(today())] : parseRepeat(e.target.value))}>
+          {REPEATS.map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+          <option value="days">On chosen days…</option>
+        </select>
+      </label>
+      {days && (
+        <div className="day-chips" role="group" aria-label="Days of the week">
+          {DAY_NAMES.map((n, d) => (
+            <button
+              key={n}
+              type="button"
+              className={days.includes(d) ? 'on' : ''}
+              aria-pressed={days.includes(d)}
+              onClick={() => {
+                const next = days.includes(d) ? days.filter((x) => x !== d) : [...days, d].sort()
+                onRepeat(next.length ? next : undefined)
+              }}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

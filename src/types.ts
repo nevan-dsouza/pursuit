@@ -71,7 +71,8 @@ export interface Task {
   completedAt: number | null
   doneBy?: string // who finished it (spaces only)
   /** comes back by itself: every day, on weekdays, or N times a week (1 to 6) */
-  repeat?: 'daily' | 'weekdays' | number
+  /** every day, Mon to Fri, a number of times a week, or chosen days of the week (0 = Monday … 6 = Sunday) */
+  repeat?: 'daily' | 'weekdays' | number | number[]
   /** the days a repeating task was done */
   doneDays?: string[]
 }

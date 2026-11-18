@@ -4395,3 +4395,230 @@ select.goal-filter.on {
   font-size: 14px;
   line-height: 1.6;
 }
+
+/* ================= Goal page: two columns. Left: grid, then the day and milestones. Right: tasks. ================= */
+.gp {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+}
+.gp-left,
+.gp-right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+}
+.gp .card {
+  margin-bottom: 0;
+}
+.gp-grid {
+  overflow-x: auto;
+  padding-top: 14px;
+  padding-bottom: 12px;
+}
+.gp-day {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.gp-day-top {
+  animation: fade-in var(--t) ease;
+}
+.gp-day .day-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 16px;
+}
+.gp-day .day-hint {
+  position: static;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: none;
+}
+.ms-sec h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+.ms-sec .ms-item {
+  align-items: flex-start;
+}
+.ms-sec .ms-item .check {
+  margin-top: 2px;
+}
+.ms-prog {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+.ms-bar {
+  flex: 1 1 auto;
+  max-width: 220px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.ms-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--blue);
+  transition: width 0.5s var(--ease);
+}
+.ms-none {
+  opacity: 0.7;
+}
+.gp-right .tasks-head {
+  margin-bottom: 10px;
+}
+.seg.mini {
+  padding: 2px;
+}
+.seg.mini button {
+  padding: 4px 10px;
+  font-size: 12.5px;
+  transition: background var(--t-fast) ease, color var(--t-fast) ease;
+}
+select.ms-pick {
+  width: auto;
+  max-width: 260px;
+  padding: 4px 26px 4px 9px;
+  font-size: 12.5px;
+}
+.tasks-count {
+  margin-left: auto;
+}
+.add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.add-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 12px;
+}
+.add-row .add-btn {
+  padding: 7px 18px;
+}
+.add-row .small-btn.on {
+  color: var(--text);
+  border-color: var(--muted);
+}
+.task-opts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-bottom: 10px;
+  animation: fade-in var(--t) ease;
+}
+.task-opts label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.task-opts select {
+  width: auto;
+  max-width: 240px;
+  padding: 4px 26px 4px 9px;
+  font-size: 12.5px;
+}
+.day-chips {
+  display: flex;
+  gap: 4px;
+}
+.day-chips button {
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  transition: background var(--t-fast) ease, color var(--t-fast) ease, border-color var(--t-fast) ease;
+}
+.day-chips button.on {
+  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(139, 92, 246, 0.6);
+  color: var(--text);
+}
+.q-edit {
+  flex-wrap: wrap;
+}
+.q-edit .task-opts {
+  flex-basis: 100%;
+  margin: 4px 0 2px;
+}
+.icon.has-content {
+  color: #a78bfa;
+}
+.gp-right .tasks-card .queue {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.gp-right .plan-card textarea {
+  min-height: 90px;
+}
+@media (min-width: 1101px) {
+  .gp {
+    grid-template-columns: minmax(400px, 45%) minmax(0, 1fr);
+  }
+}
+@media (min-width: 1101px) and (min-height: 640px) {
+  .gp {
+    flex: 1 1 0;
+  }
+  .gp-grid {
+    flex: 0 0 auto;
+  }
+  .gp-day {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .gp-right .tasks-card {
+    flex: 1 1 0;
+  }
+  .gp-right .plan-card {
+    flex: 0 0 auto;
+  }
+}
+
+.task-opts label > span {
+  white-space: nowrap;
+}
+.gp-right .q-edit {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.gp-right .q-edit > input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+/* while a task is being edited its row holds only the editor */
+.gp-right .q-item.editing > .icon,
+.gp-right .q-item.editing > .rank {
+  display: none;
+}
+.gp-right .q-item.editing {
+  padding: 8px 10px;
+  align-items: flex-start;
+}
+.gp-right .q-edit .primary {
+  padding: 6px 14px;
+}
+.gp-right .q-edit .task-opts select {
+  flex: 0 1 auto;
+}
