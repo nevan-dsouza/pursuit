@@ -884,8 +884,8 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
                   </button>
                 )}
                 {hasContent(x) && (
-                  <button className="icon has-content" title="View notes and plan of action" onClick={() => setContent(x.id)}>
-                    ≡
+                  <button className="view-content" title="Notes and plan of action written for this task" onClick={() => setContent(x.id)}>
+                    View content
                   </button>
                 )}
                 <button className={`icon ${x.crucial ? 'c-on' : ''}`} title="Crucial" onClick={() => set((st) => updateTask(st, x.id, { crucial: !x.crucial }))}>
@@ -945,12 +945,13 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
             {showDone &&
               shownDone.map((x) => (
                 <div key={x.id} className="q-item done-item">
-                  <span className="struck">{x.title}</span>
+                  <span className="done-tick" aria-hidden>✓</span>
+                  <span className="done-title">{x.title}</span>
                   <span className="took">{[x.doneBy && `by ${x.doneBy}`, x.timeMs > 0 && `took ${fmtDur(x.timeMs)}`].filter(Boolean).join(' · ')}</span>
                   {hasContent(x) && (
-                    <button className="icon has-content" title="View notes and plan of action" onClick={() => setContent(x.id)}>
-                      ≡
-                    </button>
+                    <button className="view-content" title="Notes and plan of action written for this task" onClick={() => setContent(x.id)}>
+                    View content
+                  </button>
                   )}
                   <button
                     className="icon"

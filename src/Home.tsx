@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { useStore, type Ws } from './store'
 import type { Task, View } from './types'
 import { daysLeftLabel, diffDays, fmtClock, fmtDay, fmtDur, keyOf, today } from './dates'
 import { NO_DUE, REPEATS, repeatValue, addLog, addPlanTasks, commitTimer, doneOn, finishWork, newTask, parseRepeat, poaLines, patchToday, repeatLabel, taskDue, timerElapsed, todayList, todayState, updateTask, withInbox, type Outcome } from './logic'
 import { SpacePicker } from './SpaceUI'
 import { SPACES } from './config'
-import { Md, NotesEditor } from './Md'
+import { Md } from './Md'
+
+const NotesEditor = lazy(() => import('./NotesEditor')) // the editor is loaded when Notes is first opened
 
 type Kind = 'mine' | 'team'
 const tone = (t: { crucial: boolean; important: boolean }) => (t.crucial ? 'crucial' : t.important ? 'important' : '')
@@ -456,7 +458,9 @@ export function Home({ go, now, focus, onFocus, setFocus, only, setOnly }: { go:
             <>
               <h3>Notes</h3>
               <p className="muted small">Optional. More detail for later: where you are, what you found, where you left off. Saved with the task when you pick Skip or Done.</p>
-              <NotesEditor autoFocus key={task.id} value={task.notesDraft} onChange={(v) => ws.set((st) => updateTask(st, task.id, { notesDraft: v }))} placeholder="Where you are, what you found, where you left off…" />
+              <Suspense fallback={<div className="notes-ed loading" />}>
+                <NotesEditor autoFocus key={task.id} value={task.notesDraft} onChange={(v) => ws.set((st) => updateTask(st, task.id, { notesDraft: v }))} placeholder="Where you are, what you found, where you left off…" />
+              </Suspense>
               {todayLogs.length > 0 && (
                 <button
                   className="link small"
