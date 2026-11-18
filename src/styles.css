@@ -4781,3 +4781,32 @@ select.ms-pick {
   display: inline-block;
   margin-right: 4px;
 }
+/* the guide stays in view while the milestones scroll under it; Add milestone sits in the section's header */
+.gp-day {
+  padding-top: 0;
+}
+.gp-day-top {
+  padding-top: 20px;
+}
+.gp-day-top.stuck {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface);
+  padding-bottom: 12px;
+  margin-bottom: -12px;
+}
+.ms-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.ms-head h3 {
+  margin: 0;
+}
+.ms-head .small-btn.on {
+  color: var(--text);
+  border-color: var(--muted);
+}

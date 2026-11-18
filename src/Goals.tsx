@@ -539,12 +539,12 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
     <>
       {!goal.inbox && (
         <div className="ms-sec">
-          <h3>Milestones</h3>
-          {!msForm && (
-            <button className="link small" onClick={() => setMsForm(true)}>
-              + Add a milestone
+          <div className="ms-head">
+            <h3>Milestones</h3>
+            <button className={`small-btn ghost ${msForm ? 'on' : ''}`} onClick={() => setMsForm(!msForm)} aria-expanded={msForm}>
+              {msForm ? 'Close' : '+ Add milestone'}
             </button>
-          )}
+          </div>
           {msForm && (
             <div className="add-ms">
               <input autoFocus placeholder="e.g. Finish chapter 3" value={newMs} onChange={(e) => setNewMs(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addMilestoneOn()} />
@@ -611,7 +611,7 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
       </div>
 
       <div className="card gp-day">
-      <div className="gp-day-top" key={day ?? 'none'}>
+      <div className={`gp-day-top ${day ? '' : 'stuck'}`} key={day ?? 'none'}>
         {!day ? (
             <div className="day-hint">
               <span className="day-hint-ico" aria-hidden>
