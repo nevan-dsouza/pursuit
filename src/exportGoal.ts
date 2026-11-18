@@ -61,7 +61,7 @@ export function toMarkdown(s: State, b: GoalBundle): string {
     out.push('## Log', '')
     for (const d of days) {
       out.push(`### ${d}`)
-      for (const l of b.logs.filter((x) => x.date === d).sort((a, c) => a.createdAt - c.createdAt)) out.push(`- ${l.by ? `${l.by}: ` : ''}${l.text.replace(/\n+/g, ' / ')}`)
+      for (const l of b.logs.filter((x) => x.date === d).sort((a, c) => a.createdAt - c.createdAt)) out.push(`- ${l.by ? `${l.by}: ` : ''}${[l.text.replace(/\n+/g, ' / '), l.poa ? `plan: ${l.poa.replace(/\n+/g, '; ')}` : ''].filter(Boolean).join(' · ')}`)
       out.push('')
     }
   }

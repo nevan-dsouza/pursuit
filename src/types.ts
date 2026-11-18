@@ -39,6 +39,8 @@ export interface Log {
   taskId: string | null
   /** longer notes saved with a task; shown with the day, but not counted as a log */
   note?: boolean
+  /** the plan of action the task had when it was finished, one step per line (kept on its note) */
+  poa?: string
   /** written automatically when its task was finished; removed again if the task is reopened */
   done?: boolean
   by?: string // who wrote it (spaces, or a sharing partner)

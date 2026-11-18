@@ -139,7 +139,9 @@ export function finishWork(s0: State, taskId: string, outcome: Outcome, by?: str
   if (!t) return { state: s, created: 0, logged: false }
 
   const notes = t.notesDraft.trim()
-  if (notes) s = { ...s, logs: [...s.logs, { id: uid(), goalId: t.goalId, date: today(), text: notes, taskId: t.id, note: true, createdAt: Date.now(), ...(by ? { by } : {}) }] }
+  // a finished task's plan would otherwise be lost: it is kept with the day's notes
+  const plan = outcome === 'done' && !t.repeat ? poaLines(t.poaDraft).join('\n') : ''
+  if (notes || plan) s = { ...s, logs: [...s.logs, { id: uid(), goalId: t.goalId, date: today(), text: notes, taskId: t.id, note: true, createdAt: Date.now(), ...(plan ? { poa: plan } : {}), ...(by ? { by } : {}) }] }
 
   let order = queue(s, t.goalId).map((x) => x.id)
   // the plan stays with the task until it is done; steps become tasks only when you choose

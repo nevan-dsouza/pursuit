@@ -4182,3 +4182,216 @@ select.goal-filter.on {
 .menu button:hover {
   background: var(--surface);
 }
+
+/* ---- notes: rendered text, editor, and the day's content window ---- */
+.md {
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.md > * + * {
+  margin-top: 6px;
+}
+.md p {
+  margin: 0;
+}
+.md a {
+  color: #a78bfa;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.md-h {
+  font-weight: 600;
+  margin-top: 12px;
+}
+.md-h:first-child {
+  margin-top: 0;
+}
+.md-h1 {
+  font-size: 18px;
+}
+.md-h2 {
+  font-size: 16px;
+}
+.md-h3 {
+  font-size: 14px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.md-li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 3px !important;
+}
+.md-li.checked > span:last-child {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.md-mark {
+  flex: 0 0 auto;
+  min-width: 14px;
+  color: var(--muted);
+  text-align: right;
+}
+.md-box {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  border-radius: 5px;
+  border: 1.5px solid var(--muted);
+  font-size: 11px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition: background var(--t-fast) ease, border-color var(--t-fast) ease;
+}
+.md-box.on {
+  background: var(--accent, #8b5cf6);
+  border-color: var(--accent, #8b5cf6);
+  color: #fff;
+}
+.md-box:disabled {
+  cursor: default;
+}
+.md-quote {
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+  color: var(--muted);
+}
+.md-hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 10px 0;
+}
+.notes-ed {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+  transition: border-color var(--t-fast) ease;
+}
+.notes-ed:focus-within {
+  border-color: var(--muted);
+}
+.ne-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 36px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.ne-bar button {
+  min-width: 28px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--muted);
+  transition: background var(--t-fast) ease, color var(--t-fast) ease;
+}
+.ne-bar button:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.ne-bar .ne-mode {
+  font-size: 12px;
+  padding: 0 9px;
+}
+.ne-bar .ne-mode.on {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.notes-ed textarea {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 10px 12px;
+  min-height: 220px;
+  resize: vertical;
+  line-height: 1.55;
+  outline: none;
+  box-shadow: none;
+}
+.ne-view {
+  padding: 10px 12px;
+  min-height: 220px;
+  animation: fade-in 0.15s ease;
+}
+.hist .md {
+  font-size: 13.5px;
+  margin-top: 2px;
+}
+.lg-check {
+  flex: 0 0 auto;
+  width: 14px;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  color: var(--green, #34d399);
+}
+.day-list .log-item > .lg-check {
+  flex: 0 0 auto;
+}
+.content-modal {
+  width: min(680px, calc(100vw - 32px));
+  max-height: min(80vh, 760px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  animation: pop-in var(--t) var(--ease);
+}
+.cm-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.cm-head .modal-title {
+  margin: 0 0 2px;
+}
+.cm-body {
+  overflow-y: auto;
+  padding: 6px 20px 20px;
+}
+.cm-task {
+  padding: 14px 0;
+}
+.cm-task + .cm-task {
+  border-top: 1px solid var(--border);
+}
+.cm-task h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cm-task .side-label {
+  margin: 10px 0 4px;
+}
+.cm-steps {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+}

@@ -8,6 +8,7 @@ import { REPEATS, doneLog, doneOn, doneTasks, doneThisWeek, goalDueLabel, logsBy
 import { Grid } from './Grid'
 import { download, fileName, goalBundle, importBundle, toMarkdown } from './exportGoal'
 import { useOwner } from './owner'
+import { Md } from './Md'
 import { OT, getToken, shareGoal, syncNow } from './onetask'
 
 type Kind = 'mine' | 'team'
@@ -408,7 +409,14 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
   for (const m of milestones) msByDay.set(m.date, [...(msByDay.get(m.date) ?? []), m.title])
   const dayMilestones = milestones.filter((m) => m.date === day)
   const nextMs = milestones.find((m) => !m.done && m.date >= t)
-  const dayLogs = s.logs.filter((l) => l.goalId === goal.id && l.date === day).sort((a, b) => a.createdAt - b.createdAt)
+  const dayAll = s.logs.filter((l) => l.goalId === goal.id && l.date === day).sort((a, b) => a.createdAt - b.createdAt)
+  const dayLogs = dayAll.filter((l) => !l.note) // notes are long: they open in their own window
+  // notes and plans for the day, per task: what was saved, plus what is still being written today
+  const dayContent = [
+    ...dayAll.filter((l) => l.note && (l.text.trim() || l.poa)).map((l) => ({ id: l.id, title: (l.taskId && s.tasks.find((x) => x.id === l.taskId)?.title) || 'Task', notes: l.text, poa: l.poa ?? '', by: l.by, draft: false })),
+    ...(day === t ? s.tasks.filter((x) => x.goalId === goal.id && x.status !== 'done' && (x.notesDraft.trim() || x.poaDraft.trim())).map((x) => ({ id: x.id, title: x.title, notes: x.notesDraft, poa: x.poaDraft, by: undefined as string | undefined, draft: true })) : []),
+  ]
+  const [content, setContent] = useState(false)
   const q = queue(s, goal.id)
   const done = doneTasks(s, goal.id)
   const allTasks = s.tasks.filter((x) => x.goalId === goal.id)
@@ -610,6 +618,11 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
               ) : (
                 <span className="muted small day-note">Logs are for today or earlier.</span>
               )}
+              {dayContent.length > 0 && (
+                <button className="day-act" onClick={() => setContent(true)} title="Notes and plans of action written on this day">
+                  View content
+                </button>
+              )}
             </div>
             {adding === 'ms' && (
               <div className="day-entry">
@@ -661,9 +674,8 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
               ))}
               {dayLogs.map((l) => (
                 <div key={l.id} className="line-item log-item">
-                  <span className="lg-dot" />
-                  <span className={l.note ? 'pre' : ''}>
-                    {l.note && <span className="note-tag">note</span>}
+                  {l.done ? <span className="lg-check" title="Task completed">✓</span> : <span className="lg-dot" />}
+                  <span>
                     {l.by && <span className="log-by">{l.by} · </span>}
                     {l.taskId && !l.done && <span className="log-src">{taskTitle(l.taskId) ?? 'Task'} · </span>}
                     {l.text}
@@ -689,6 +701,49 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
           </>
         )}
       </div>
+      {content && day && (
+        <div className="overlay" onClick={() => setContent(false)} onKeyDown={(e) => e.key === 'Escape' && setContent(false)}>
+          <div className="content-modal" role="dialog" aria-label={`Notes and plans for ${fmtDay(day)}`} onClick={(e) => e.stopPropagation()}>
+            <div className="cm-head">
+              <div>
+                <h2 className="modal-title">{fmtDay(day)}</h2>
+                <div className="muted small">Notes and plans of action · {goal.title}</div>
+              </div>
+              <div className="spacer" />
+              <button className="icon" onClick={() => setContent(false)} aria-label="Close" autoFocus>
+                ×
+              </button>
+            </div>
+            <div className="cm-body">
+              {dayContent.map((c) => (
+                <section key={c.id} className="cm-task">
+                  <h3>
+                    {c.title}
+                    {c.by && <span className="muted small"> · {c.by}</span>}
+                    {c.draft && <span className="today-chip">in progress</span>}
+                  </h3>
+                  {c.notes.trim() && (
+                    <>
+                      <div className="side-label">Notes</div>
+                      <Md text={c.notes} />
+                    </>
+                  )}
+                  {c.poa.trim() && (
+                    <>
+                      <div className="side-label">Plan of action</div>
+                      <ol className="cm-steps">
+                        {c.poa.split('\n').filter((x) => x.trim()).map((x, i) => (
+                          <li key={i}>{x.trim()}</li>
+                        ))}
+                      </ol>
+                    </>
+                  )}
+                </section>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
   const tasksCard = (

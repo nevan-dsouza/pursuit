@@ -5,6 +5,7 @@ import { daysLeftLabel, diffDays, fmtClock, fmtDay, fmtDur, keyOf, today } from 
 import { NO_DUE, REPEATS, addLog, addPlanTasks, commitTimer, doneOn, finishWork, newTask, parseRepeat, poaLines, patchToday, repeatLabel, taskDue, timerElapsed, todayList, todayState, updateTask, withInbox, type Outcome } from './logic'
 import { SpacePicker } from './SpaceUI'
 import { SPACES } from './config'
+import { Md, NotesEditor } from './Md'
 
 type Kind = 'mine' | 'team'
 const tone = (t: { crucial: boolean; important: boolean }) => (t.crucial ? 'crucial' : t.important ? 'important' : '')
@@ -438,7 +439,7 @@ export function Home({ go, now, focus, onFocus, setFocus, only, setOnly }: { go:
                 )}
               </div>
               {history.length > 0 && <div className="side-label">On this task</div>}
-              {history.map((l, i) => (
+              {history.filter((l) => l.text.trim()).map((l, i) => (
                 <div key={l.id} className={`hist ${i === 0 && burst > 0 && l.date === t0 ? 'fresh' : ''}`}>
                   <div className="muted small">
                     {l.date === t0 ? 'Today' : fmtDay(l.date)}
@@ -446,7 +447,7 @@ export function Home({ go, now, focus, onFocus, setFocus, only, setOnly }: { go:
                     {l.note ? ' · note' : ''}
                     {l.taskId !== task.id && parent ? ` · from “${parent.title}”` : ''}
                   </div>
-                  <p className={l.note ? 'pre' : ''}>{l.text}</p>
+                  {l.note ? <Md text={l.text} /> : <p>{l.text}</p>}
                 </div>
               ))}
             </>
@@ -454,7 +455,7 @@ export function Home({ go, now, focus, onFocus, setFocus, only, setOnly }: { go:
             <>
               <h3>Notes</h3>
               <p className="muted small">Optional. More detail for later: where you are, what you found, where you left off. Saved with the task when you pick Skip or Done.</p>
-              <textarea autoFocus rows={10} value={task.notesDraft} onChange={(e) => ws.set((st) => updateTask(st, task.id, { notesDraft: e.target.value }))} placeholder="Where you are, what you found, where you left off…" />
+              <NotesEditor autoFocus key={task.id} value={task.notesDraft} onChange={(v) => ws.set((st) => updateTask(st, task.id, { notesDraft: v }))} placeholder="Where you are, what you found, where you left off…" />
               {todayLogs.length > 0 && (
                 <button
                   className="link small"
