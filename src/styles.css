@@ -4114,3 +4114,25 @@ input.sec-name {
   flex: 0 0 auto;
   min-height: auto;
 }
+
+/* Home: all tasks, or one goal */
+select.goal-filter {
+  width: auto;
+  max-width: 150px;
+  padding: 3px 26px 3px 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+  background-color: transparent;
+  background-position: right 8px center;
+  border-radius: 999px;
+}
+select.goal-filter.on {
+  color: var(--yellow);
+  border-color: rgba(250, 204, 21, 0.5);
+}
+.tl-head {
+  align-items: center;
+  gap: 8px;
+  padding-right: 0;
+}

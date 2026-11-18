@@ -3,7 +3,7 @@ import { useStore } from './store'
 import type { View } from './types'
 import { fmtClock, fmtDay, fmtDur, keyOf, today } from './dates'
 import { commitTimer, streaks, timerElapsed, todayList, withMySpaceWork } from './logic'
-import { Home, TaskGroup, type Focus } from './Home'
+import { GoalFilter, Home, TaskGroup, type Focus } from './Home'
 import { GoalList, Goals, type GoalNav, type GoalSel } from './Goals'
 import { Meetings } from './Meetings'
 import { Settings } from './Settings'
@@ -69,6 +69,22 @@ export default function App() {
   const [now, setNow] = useState(Date.now())
   const [tutorial, setTutorial] = useState(false)
   const [focus, setFocus] = useState<Focus>(null)
+  const [onlyGoal, setOnlyGoal] = useState(() => {
+    try {
+      return localStorage.getItem('pursuit:only-goal') ?? ''
+    } catch {
+      return ''
+    }
+  })
+  const pickOnly = (id: string) => {
+    setOnlyGoal(id)
+    setFocus(null)
+    try {
+      localStorage.setItem('pursuit:only-goal', id)
+    } catch {
+      /* ignore */
+    }
+  }
   // the Shared page exists for one account only; the address is kept as a hash, not in the code
   const [owner, setOwner] = useState(false)
   useEffect(() => {
@@ -162,10 +178,11 @@ export default function App() {
     if (view !== 'home') go('home')
   }
   const t0 = today()
-  const myList = todayList(s)
+  const only = s.goals.some((g) => g.id === onlyGoal) ? onlyGoal : '' // the goal Home is focused on, if any
+  const myList = todayList(s).filter((x) => !only || x.goalId === only)
   const curId = focus?.k === 'mine' && myList.some((t) => t.id === focus.id) ? focus.id : myList[0]?.id
   const doneToday = s.tasks.filter((t) => (t.status === 'done' && t.completedAt && keyOf(new Date(t.completedAt)) === t0) || (t.doneDays ?? []).includes(t0)).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
-  const home = <Home go={go} now={now} focus={focus} onFocus={onFocus} setFocus={setFocus} />
+  const home = <Home go={go} now={now} focus={focus} onFocus={onFocus} setFocus={setFocus} only={only} setOnly={pickOnly} />
 
   return (
     <div className={`app ${rail ? 'rail' : ''}`}>
@@ -199,7 +216,7 @@ export default function App() {
           <div className="sb-tasks" key="tasks">
             <div className="tl-head">
               <span>My tasks</span>
-              <span className="muted small">{fmtDay(t0)}</span>
+              {s.goals.length < 2 ? <span className="muted small">{fmtDay(t0)}</span> : <GoalFilter value={only} onChange={pickOnly} />}
             </div>
             <TaskGroup ws={mine} list={myList} curId={view === 'home' ? curId : undefined} onFocus={(id) => onFocus('mine', id)} emptyText="Nothing to do right now. Add a task below." />
             {doneToday.length > 0 && (

@@ -139,16 +139,32 @@ export function TaskGroup({ ws, list, curId, onFocus, emptyText }: { ws: Ws; lis
   )
 }
 
+/** Work on everything, or pick one goal and see only its tasks. */
+export function GoalFilter({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const { s } = useStore()
+  if (s.goals.length < 2) return null
+  return (
+    <select className={`goal-filter ${value ? 'on' : ''}`} value={value} onChange={(e) => onChange(e.target.value)} title="Work on all tasks, or focus on one goal">
+      <option value="">All goals</option>
+      {s.goals.map((g) => (
+        <option key={g.id} value={g.id}>
+          {g.title}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 export type Focus = { k: Kind; id: string } | null
 
-export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => void; now: number; focus: Focus; onFocus: (k: Kind, id: string) => void; setFocus: (f: Focus) => void }) {
+export function Home({ go, now, focus, onFocus, setFocus, only, setOnly }: { go: (v: View) => void; now: number; focus: Focus; onFocus: (k: Kind, id: string) => void; setFocus: (f: Focus) => void; only: string; setOnly: (id: string) => void }) {
   const { mine, team, toast, space } = useStore()
   const [panel, setPanel] = useState<null | 'log' | 'notes' | 'poa'>(null)
   const [logText, setLogText] = useState('')
   const [burst, setBurst] = useState(0)
   const [editing, setEditing] = useState<string | null>(null)
   const t0 = today()
-  const lists: Record<Kind, Task[]> = { mine: todayList(mine.s), team: team ? todayList(team.s) : [] }
+  const lists: Record<Kind, Task[]> = { mine: todayList(mine.s).filter((x) => !only || x.goalId === only), team: team ? todayList(team.s) : [] }
   const wsOf = (k: Kind): Ws | null => (k === 'team' ? team : mine)
 
   // the task in the centre: the one you clicked, else the top of your own list, else the top of the space's
@@ -354,7 +370,7 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
           </div>
         ) : (
           <div className="task-view">
-            <h1 className="task-title muted-title">{doneToday.length ? 'All clear for today' : noGoals ? 'What do you want to get done?' : 'Nothing lined up'}</h1>
+            <h1 className="task-title muted-title">{only ? 'Nothing left in this goal today' : doneToday.length ? 'All clear for today' : noGoals ? 'What do you want to get done?' : 'Nothing lined up'}</h1>
             <p className="muted">{noGoals ? 'Add a quick to-do from the sidebar, or create a goal for something bigger.' : 'Add a task and it will show up here.'}</p>
             <button className="primary" onClick={() => go('goals')}>
               {noGoals ? 'Create a goal' : 'Go to Goals'}
@@ -366,7 +382,7 @@ export function Home({ go, now, focus, onFocus, setFocus }: { go: (v: View) => v
       <div className="mobile-tasks">
         <div className="tl-head">
           <span>My tasks</span>
-          <span className="muted small">{fmtDay(t0)}</span>
+          <GoalFilter value={only} onChange={setOnly} />
         </div>
         <TaskGroup ws={mine} list={lists.mine} curId={cur?.k === 'mine' ? cur.id : undefined} onFocus={(id) => doFocus('mine', id)} emptyText="Nothing to do right now. Add a task below." />
         {doneToday.length > 0 && (
