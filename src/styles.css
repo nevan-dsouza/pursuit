@@ -4008,3 +4008,109 @@ input.sec-name {
     flex: 0 0 auto;
   }
 }
+
+/* ================= Goal page: use the whole width, compact task rows, sticky hint ================= */
+.goals-page .goal-detail {
+  max-width: none;
+}
+.day-rest {
+  position: relative;
+}
+.day-hint {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+  padding-top: 2px;
+}
+.tasks-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+.tasks-head h3 {
+  margin: 0 6px 0 0;
+}
+.tasks-head .add-task,
+.tasks-head .add-opts {
+  display: contents;
+}
+.tasks-head .add-task input {
+  order: 1;
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 7px 12px;
+}
+.tasks-head .add-opts label {
+  order: 2;
+}
+.tasks-head .add-btn {
+  order: 3;
+  padding: 7px 18px;
+}
+.tasks-card .q-item {
+  padding: 3px 6px 3px 8px;
+}
+.tasks-card .q-title {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+  font-size: 14.500px;
+}
+.tasks-card .queue {
+  gap: 4px;
+}
+/* two columns of tasks when there is room for them */
+.tasks-card .queue {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1750px) {
+  .tasks-card .queue {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 10px;
+  }
+}
+/* with the sidebar collapsed there is room for two columns sooner */
+@media (min-width: 1500px) {
+  .app.rail .tasks-card .queue {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 10px;
+  }
+}
+@media (min-width: 1101px) and (min-height: 640px) {
+  .timeline {
+    max-height: min(36vh, 262px);
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
+  .detail {
+    gap: 12px;
+  }
+  .goal-detail:has(.detail) {
+    padding-top: 16px;
+  }
+  .detail-head {
+    gap: 6px;
+  }
+  .back-all {
+    margin-bottom: 4px;
+  }
+}
+
+@media (min-width: 1101px) and (min-height: 640px) {
+  .timeline .grid-legend {
+    margin-top: 8px;
+  }
+  .tasks-card {
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
+}
+.day-rest {
+  flex: 0 0 auto;
+  min-height: auto;
+}

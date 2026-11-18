@@ -21,7 +21,7 @@ export function Grid({ start, deadline, end: last, counts, milestones, selected,
   const end = last ?? (deadline < start ? start : deadline)
   const gridEnd = addDays(end, 6 - weekday(end))
   const weeks = Math.round((diffDays(gridStart, gridEnd) + 1) / 7)
-  const cell = weeks <= 8 ? 30 : weeks <= 16 ? 24 : weeks <= 26 ? 18 : 14 // bigger boxes for shorter goals
+  const cell = weeks <= 16 ? 20 : weeks <= 26 ? 17 : 14 // bigger boxes for shorter goals
   const t = today()
 
   const cols: string[][] = []

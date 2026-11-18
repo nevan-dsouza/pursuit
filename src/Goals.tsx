@@ -638,8 +638,8 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
   )
   const tasksCard = (
     <div className="card tasks-card">
+      <div className="tasks-head">
       <h3>Tasks</h3>
-      <p className="muted small">Small, actionable steps. They show on Home. Drag to reorder.</p>
       <div className="add-task">
         <input ref={taskInput} placeholder={open ? 'Add a task, e.g. Read 20 pages' : 'Add a task…'} value={taskText} onChange={(e) => setTaskText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} />
         <button className="primary add-btn" disabled={!taskText.trim()} onClick={() => (addTask(), taskInput.current?.focus())}>
@@ -682,6 +682,7 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
             ))}
           </select>
         </label>
+      </div>
       </div>
       <div className="tasks-scroll">
         <div className="queue">
