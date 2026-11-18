@@ -390,6 +390,14 @@ export function buildMine(s: State, remote: Remote): { docs: Doc[]; state: State
   return { docs, state: { ...s, goals, logs } }
 }
 
+/** One full sync: read the branch, take in the partner's side, write mine. Returns the new state and how many files changed. */
+export async function syncNow(s: State): Promise<{ state: State; remote: Remote; written: number }> {
+  const r = await readRemote() // always work from the newest version on the branch
+  const { docs, state } = buildMine(applyRemote(s, r), r)
+  const written = await writeMine(r, docs)
+  return { state, remote: r, written }
+}
+
 /** Start or stop sharing one of my goals. Stopping leaves the files on the branch as they were. */
 export const shareGoal = (s: State, goalId: string, on: boolean): State => ({
   ...s,

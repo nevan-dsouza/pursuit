@@ -11,9 +11,9 @@ import { Brand } from './Brand'
 import { Spaces } from './SpaceUI'
 import { SPACES } from './config'
 import { Shared } from './Shared'
+import { useOwner } from './owner'
 import { Flame, Login, Stats, Tutorial } from './Extras'
 
-const OWNER_HASH = 'e719f5715aff4be7e26ed390aceb0fd03d323850e143474c0b8ef2633afe4cc7'
 const RAIL = 'pursuit:side-collapsed'
 const Icon = ({ children }: { children: ReactNode }) => (
   <svg className="sb-ico" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -85,20 +85,7 @@ export default function App() {
       /* ignore */
     }
   }
-  // the Shared page exists for one account only; the address is kept as a hash, not in the code
-  const [owner, setOwner] = useState(false)
-  useEffect(() => {
-    let live = true
-    const email = auth.status === 'in' ? (auth.email ?? '').trim().toLowerCase() : ''
-    if (!email || !crypto?.subtle) return setOwner(false)
-    crypto.subtle.digest('SHA-256', new TextEncoder().encode(email)).then((buf) => {
-      const hex = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
-      if (live) setOwner(hex === OWNER_HASH)
-    })
-    return () => {
-      live = false
-    }
-  }, [auth.status, auth.email])
+  const owner = useOwner() // the Shared page exists for one account only
   const [goalSel, setGoalSel] = useState<GoalSel>(null)
   const [goalNew, setGoalNew] = useState<'mine' | 'team' | null>(null)
   const goalNav: GoalNav = { sel: goalSel, setSel: setGoalSel, creating: goalNew, setCreating: setGoalNew }

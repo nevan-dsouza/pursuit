@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore } from './store'
 import { fmtDay } from './dates'
-import { OT, applyRemote, attachPlan, buildMine, describe, detachPlan, getToken, importGoal, items, likelyPlan, readRemote, setToken, shareGoal, splitBody, writeMine, type GoalDoc, type Item, type PlanDoc, type Remote } from './onetask'
+import { OT, applyRemote, attachPlan, buildMine, describe, detachPlan, getToken, importGoal, items, likelyPlan, readRemote, setToken, shareGoal, splitBody, syncNow, type GoalDoc, type Item, type PlanDoc, type Remote } from './onetask'
 
 /* Shared goals with a partner on onetask. Shown to one account only (see App). */
 export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
@@ -34,10 +34,7 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
     setBusy('push')
     setError('')
     try {
-      const r = await readRemote() // always work from the newest version on the branch
-      const fresh = applyRemote(s, r)
-      const { docs, state } = buildMine(fresh, r)
-      const n = await writeMine(r, docs)
+      const { state, written: n } = await syncNow(s)
       set(() => state)
       setRemote(await readRemote())
       toast(n ? `Pushed ${n} file${n === 1 ? '' : 's'} to ${OT.me}/` : 'Nothing new to push')
@@ -70,7 +67,7 @@ export function Shared({ openGoal }: { openGoal: (id: string) => void }) {
                   <div className="sh-main">
                     <b>{it.newest.title}</b>
                     <span className="muted small">
-                      Goal · {describe(it.newest)} · {entries} log{entries === 1 ? '' : 's'} · {it.sharedBy.length ? `shared by ${it.sharedBy.join(', ')}` : 'older goal, no partner shares it now'} · last saved by {it.newest.saved_by}
+                      Goal · {describe(it.newest)} · {entries} log{entries === 1 ? '' : 's'} · {it.sharedBy.length ? `shared by ${it.sharedBy.join(', ')}` : it.mine?.doc.shared ? 'shared by you, not picked up by a partner yet' : 'older goal, no partner shares it now'} · last saved by {it.newest.saved_by}
                     </span>
                   </div>
                   {g ? (

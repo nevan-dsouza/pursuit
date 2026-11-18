@@ -4136,3 +4136,49 @@ select.goal-filter.on {
   gap: 8px;
   padding-right: 0;
 }
+
+/* export menu and share button on a goal */
+.menu-wrap {
+  position: relative;
+}
+.small-btn.ghost {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  transition: border-color var(--t-fast) ease, color var(--t-fast) ease;
+}
+.small-btn.ghost:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+.share-btn {
+  color: #c4b5fd;
+  border-color: rgba(139, 92, 246, 0.5);
+}
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  width: 290px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: pop-in 0.18s var(--ease);
+}
+.menu button {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+.menu button:hover {
+  background: var(--surface);
+}

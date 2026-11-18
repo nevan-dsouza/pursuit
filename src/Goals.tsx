@@ -6,6 +6,9 @@ import type { Goal, State, Task } from './types'
 import { addDays, daysLeftLabel, diffDays, fmtDay, fmtDur, today, weekday } from './dates'
 import { REPEATS, doneLog, doneOn, doneTasks, doneThisWeek, goalDueLabel, logsByDay, newTask, parseRepeat, queue, repeatLabel, setQueue, toggleRepeatDone, undoneLog, updateTask } from './logic'
 import { Grid } from './Grid'
+import { download, fileName, goalBundle, importBundle, toMarkdown } from './exportGoal'
+import { useOwner } from './owner'
+import { OT, getToken, shareGoal, syncNow } from './onetask'
 
 type Kind = 'mine' | 'team'
 
@@ -168,7 +171,8 @@ export function Goals({ nav }: { nav: GoalNav }) {
 
 /** All goals as tiles, grouped under sections you name. Drag a tile to reorder it or move it to another section. */
 function Overview({ open, create }: { open: (id: string) => void; create: () => void }) {
-  const { s, set } = useStore()
+  const { s, set, toast } = useStore()
+  const fileRef = useRef<HTMLInputElement>(null)
   const [drag, setDrag] = useState<string | null>(null)
   const [over, setOver] = useState<string | null>(null)
   const [naming, setNaming] = useState<string | null>(null)
@@ -275,6 +279,28 @@ function Overview({ open, create }: { open: (id: string) => void; create: () => 
       <header className="page-head">
         <h2>Goals</h2>
         <div className="spacer" />
+        <button className="link small" onClick={() => fileRef.current?.click()} title="Add a goal from a file exported from Pursuit">
+          Import
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          hidden
+          onChange={async (e) => {
+            const f = e.target.files?.[0]
+            e.target.value = ''
+            if (!f) return
+            try {
+              const raw = JSON.parse(await f.text())
+              const { title } = importBundle(s, raw) // checks the file first, so a wrong one never reaches the store
+              set((st) => importBundle(st, raw).state)
+              toast(`Imported “${title || 'goal'}”`)
+            } catch (err: any) {
+              toast(err.message?.includes('Pursuit') ? err.message : 'That file could not be read as an exported goal.')
+            }
+          }}
+        />
         <button className="link small" onClick={addSection}>
           + Section
         </button>
@@ -347,6 +373,35 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
   const [drag, setDrag] = useState<string | null>(null)
   const [showDone, setShowDone] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
+  const owner = useOwner()
+  const [menu, setMenu] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const exportAs = (kind: 'md' | 'json') => {
+    const b = goalBundle(s, goal.id)
+    if (!b) return
+    if (kind === 'md') download(`${fileName(goal.title)}.md`, toMarkdown(s, b), 'text/markdown')
+    else download(`${fileName(goal.title)}.pursuit.json`, JSON.stringify(b, null, 2), 'application/json')
+    setMenu(false)
+    toast(kind === 'md' ? 'Exported as a document' : 'Exported as data')
+  }
+  // one click: mark the goal as shared, then sync it with the partner's repo straight away
+  const shareNow = async () => {
+    if (!getToken()) {
+      location.hash = 'shared'
+      return toast('Add your GitHub token on the Shared page first')
+    }
+    setSharing(true)
+    try {
+      const { state, written } = await syncNow(shareGoal(s, goal.id, true))
+      set(() => state)
+      toast(written ? `Pushed to ${OT.owner}/${OT.repo} (${written} file${written === 1 ? '' : 's'})` : 'Already up to date on the shared branch')
+    } catch (e: any) {
+      set((st) => shareGoal(st, goal.id, true)) // stays marked as shared; Push on the Shared page retries
+      toast(e.message ?? 'Could not push')
+    } finally {
+      setSharing(false)
+    }
+  }
 
   const milestones = s.milestones.filter((m) => m.goalId === goal.id).sort((a, b) => (a.date < b.date ? -1 : 1))
   const msByDay = new Map<string, string[]>()
@@ -924,6 +979,28 @@ function GoalDetail({ goal, ws, spaceName }: { goal: Goal; ws: Ws; spaceName?: s
             {done.length}/{allTasks.length} tasks
           </span>
           <div className="spacer" />
+          {owner && !spaceName && !open && (
+            <button className="small-btn ghost share-btn" disabled={sharing} onClick={shareNow} title={`Writes this goal, its milestones, your logs, its tasks and its plan to ${OT.me}/ on ${OT.owner}/${OT.repo}`}>
+              {sharing ? 'Pushing…' : goal.shareId ? 'Shared · push now' : 'Share with Kush'}
+            </button>
+          )}
+          <div className="menu-wrap" onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setMenu(false)}>
+            <button className="small-btn ghost" onClick={() => setMenu(!menu)} aria-expanded={menu}>
+              Export
+            </button>
+            {menu && (
+              <div className="menu">
+                <button onClick={() => exportAs('md')}>
+                  <b>Readable document</b>
+                  <span className="muted small">Markdown: opens in any notes app or editor</span>
+                </button>
+                <button onClick={() => exportAs('json')}>
+                  <b>Complete data</b>
+                  <span className="muted small">JSON: everything, can be imported back into Pursuit</span>
+                </button>
+              </div>
+            )}
+          </div>
           <button className="danger small-btn" onClick={delGoal} onBlur={() => setConfirmDel(false)}>
             {confirmDel ? 'Click again to delete' : 'Delete goal'}
           </button>
