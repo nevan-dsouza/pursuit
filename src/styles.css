@@ -3687,3 +3687,179 @@ input.sec-name {
     padding: 13px 12px 12px;
   }
 }
+
+/* ================= Goal page: timeline band (grid + the picked day beside it) ================= */
+.timeline {
+  display: flex;
+  gap: 26px;
+  align-items: stretch;
+  margin-bottom: 18px;
+}
+.tl-grid {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.day-side {
+  flex: 0 0 340px;
+  min-width: 0;
+  border-left: 1px solid var(--border);
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  animation: fade-in var(--t) ease;
+}
+.day-hint {
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+.day-hint .link {
+  margin-top: 10px;
+  text-align: left;
+}
+.day-hint-ico {
+  display: grid;
+  grid-template-columns: repeat(2, 13px);
+  gap: 3px;
+  margin-bottom: 8px;
+}
+.day-hint-ico i {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  background: var(--p0);
+}
+.day-hint-ico i.on {
+  background: var(--p3);
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+.day-side .day-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+.day-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.day-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: border-color var(--t-fast) ease, background-color var(--t-fast) ease, transform var(--t-fast) ease;
+}
+.day-act:hover {
+  border-color: var(--muted);
+}
+.day-act:active {
+  transform: scale(0.97);
+}
+.day-act.on {
+  border-color: var(--purple);
+}
+.lg-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--p3);
+  flex-shrink: 0;
+}
+.day-note {
+  padding: 0 4px;
+}
+.day-entry {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  animation: rise-in var(--t) var(--ease);
+}
+.day-entry input {
+  flex: 1;
+  min-width: 0;
+}
+.day-entry .primary {
+  flex-shrink: 0;
+  padding: 0 14px;
+}
+.day-list {
+  margin-top: 12px;
+  overflow-y: auto;
+  max-height: 190px;
+}
+.day-list .line-item {
+  animation: fade-in var(--t) ease;
+}
+@media (max-width: 1100px) {
+  .timeline {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .day-side {
+    flex-basis: auto;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding: 16px 0 0;
+  }
+  .day-hint {
+    margin: 0;
+  }
+}
+.day-list .log-item > .lg-dot {
+  flex: 0 0 9px;
+}
+.day-list .log-item > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.day-list .line-item {
+  gap: 9px;
+}
+
+/* goal page columns: tasks on the left, timeline and milestones on the right */
+.two-col .col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.two-col .col > .card,
+.two-col .col > .timeline {
+  margin-bottom: 0;
+}
+.col.narrow .timeline {
+  flex-direction: column;
+  gap: 16px;
+}
+.col.narrow .day-side {
+  flex-basis: auto;
+  border-left: none;
+  border-top: 1px solid var(--border);
+  padding: 16px 0 0;
+}
+.col.narrow .day-hint {
+  margin: 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+.col.narrow .day-hint-ico {
+  margin-bottom: 0;
+}
+.col.narrow .day-hint .link {
+  flex-basis: 100%;
+  margin-top: 4px;
+}
