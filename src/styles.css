@@ -3863,3 +3863,148 @@ input.sec-name {
   flex-basis: 100%;
   margin-top: 4px;
 }
+
+/* ================= Goal page fits the screen: grid + day/milestones on top, tasks below, each scrolling inside ================= */
+.col.narrow .timeline {
+  flex-direction: row;
+}
+.timeline {
+  margin-bottom: 0;
+}
+.day-side {
+  flex: 0 0 380px;
+}
+.day-rest {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+.day-hint {
+  margin: 0;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.day-hint-ico {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+.day-side .card {
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 0;
+}
+.day-side .card h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+.day-side .card > p.muted {
+  display: none;
+}
+.bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  min-height: 0;
+}
+.bottom.split {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+.bottom .plan-card {
+  margin-bottom: 0;
+}
+@media (min-width: 1101px) and (min-height: 640px) {
+  .goal-detail:has(.detail) {
+    height: 100vh;
+    padding-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .detail {
+    flex: 1 1 0;
+    min-height: 0;
+    max-width: none;
+    gap: 14px;
+  }
+  .timeline {
+    flex: 0 0 auto;
+    max-height: 46vh;
+  }
+  .tl-grid {
+    overflow: auto;
+  }
+  .day-side {
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .day-list {
+    max-height: none;
+    overflow: visible;
+  }
+  .bottom {
+    flex: 1 1 0;
+  }
+  .tasks-card,
+  .bottom .plan-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .tasks-scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-right: -4px;
+  }
+  .bottom .plan-card textarea {
+    flex: 1 1 0;
+    min-height: 0;
+    resize: none;
+  }
+  .tasks-card > p.muted {
+    display: none;
+  }
+  .tasks-card .add-task {
+    margin-top: 10px;
+  }
+}
+@media (max-width: 1100px) {
+  .bottom.split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .day-hint {
+    padding-bottom: 12px;
+  }
+}
+.back-all {
+  align-self: flex-start;
+}
+@media (min-width: 1101px) {
+  .timeline .tl-grid {
+    flex: 0 1 auto;
+    max-width: 62%;
+  }
+  .timeline .day-side {
+    flex: 1 1 380px;
+  }
+}
+@media (max-width: 1100px) {
+  .timeline,
+  .col.narrow .timeline {
+    flex-direction: column;
+  }
+  .timeline .day-side {
+    flex: 0 0 auto;
+  }
+}
